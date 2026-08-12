@@ -619,7 +619,7 @@ export default function Dashboard() {
               </div>
               <span className="text-xs text-muted-foreground">{countAll} data</span>
             </div>
-            <HouseTable data={pagedAll} page={pageAll} totalPages={totalAllPages} onPageChange={setPageAll} />
+            <RawDataTable data={pagedAll} page={pageAll} totalPages={totalAllPages} onPageChange={setPageAll} />
           </TabsContent>
 
           {/* Tabel Perubahan */}
@@ -636,7 +636,7 @@ export default function Dashboard() {
               </div>
               <span className="text-xs text-muted-foreground">{countChanged} rumah berubah</span>
             </div>
-            <HouseTable data={pagedChanged} page={pageChanged} totalPages={totalChangedPages} onPageChange={setPageChanged} />
+            <ChangesTable data={pagedChanged} page={pageChanged} totalPages={totalChangedPages} onPageChange={setPageChanged} />
           </TabsContent>
         </Tabs>
       </div>
@@ -974,33 +974,48 @@ export default function Dashboard() {
   );
 }
 
-// ─── House table ────────────────────────────────────────────────────────────
+// ─── Shared pagination ──────────────────────────────────────────────────────
 
-function HouseTable({
-  data, page, totalPages, onPageChange,
-}: {
-  data: any[]; page: number; totalPages: number; onPageChange: (p: number) => void;
-}) {
+function TablePager({ page, totalPages, onPageChange }: { page: number; totalPages: number; onPageChange: (p: number) => void }) {
+  if (totalPages <= 1) return null;
+  return (
+    <div className="flex items-center justify-between px-4 py-2.5 border-t bg-muted/10">
+      <span className="text-xs text-muted-foreground">Hal. {page} / {totalPages}</span>
+      <div className="flex gap-2">
+        <Button variant="outline" size="sm" onClick={() => onPageChange(Math.max(1, page - 1))} disabled={page === 1}>Sebelumnya</Button>
+        <Button variant="outline" size="sm" onClick={() => onPageChange(Math.min(totalPages, page + 1))} disabled={page === totalPages}>Selanjutnya</Button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Tabel Seluruhnya — data mentah bangunan ─────────────────────────────────
+
+function RawDataTable({ data, page, totalPages, onPageChange }: { data: any[]; page: number; totalPages: number; onPageChange: (p: number) => void }) {
   return (
     <div className="flex flex-col">
       <div className="overflow-x-auto">
         <Table>
           <TableHeader className="bg-muted/40">
             <TableRow>
-              <TableHead className="w-10 text-center text-xs">No.</TableHead>
-              <TableHead className="text-xs">Nama KK</TableHead>
-              <TableHead className="text-xs">Alamat</TableHead>
-              <TableHead className="w-14 text-xs">RT/RW</TableHead>
-              <TableHead className="text-xs">Status</TableHead>
-              <TableHead className="text-xs">Jenis Perubahan</TableHead>
-              <TableHead className="text-xs">Kondisi</TableHead>
-              <TableHead className="text-xs">Klaster</TableHead>
+              <TableHead className="w-8 text-center text-xs sticky left-0 bg-muted/40">No.</TableHead>
+              <TableHead className="text-xs min-w-[160px]">Nama KK</TableHead>
+              <TableHead className="text-xs w-16">RT/RW</TableHead>
+              <TableHead className="text-xs text-right w-24">L. Bangunan</TableHead>
+              <TableHead className="text-xs text-right w-20">L. Lahan</TableHead>
+              <TableHead className="text-xs w-20">Jml. Lantai</TableHead>
+              <TableHead className="text-xs w-28">Jenis Lantai</TableHead>
+              <TableHead className="text-xs w-36">Jenis Dinding</TableHead>
+              <TableHead className="text-xs w-24">Jenis Atap</TableHead>
+              <TableHead className="text-xs w-32">Jenis Plafon</TableHead>
+              <TableHead className="text-xs w-28">Jenis Pagar</TableHead>
+              <TableHead className="text-xs w-28">Kondisi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-10 text-muted-foreground text-sm">
+                <TableCell colSpan={12} className="text-center py-10 text-muted-foreground text-sm">
                   <div className="flex flex-col items-center gap-2">
                     <AlertCircle className="w-7 h-7 opacity-30" />
                     Tidak ada data yang ditemukan.
@@ -1009,60 +1024,122 @@ function HouseTable({
               </TableRow>
             ) : (
               data.map((h, i) => (
-                <TableRow
-                  key={h.id}
-                  className={h.statusPerubahan === "berubah" ? "bg-destructive/[0.025]" : ""}
-                >
-                  <TableCell className="text-center font-mono text-[11px] text-muted-foreground">
-                    {(page - 1) * 10 + i + 1}
-                  </TableCell>
-                  <TableCell className="font-medium text-sm">{h.namaKepalaKeluarga}</TableCell>
-                  <TableCell className="max-w-[160px] truncate text-xs text-muted-foreground" title={h.alamat}>
-                    {h.alamat}
+                <TableRow key={h.id}>
+                  <TableCell className="text-center font-mono text-[11px] text-muted-foreground">{(page - 1) * 10 + i + 1}</TableCell>
+                  <TableCell>
+                    <div className="font-medium text-sm leading-tight">{h.namaKepalaKeluarga}</div>
+                    <div className="text-[10px] text-muted-foreground font-mono">{h.id}</div>
                   </TableCell>
                   <TableCell className="font-mono text-xs whitespace-nowrap">
-                    {h.rt.replace("RT ", "")} / {h.rw.replace("RW ", "")}
+                    {h.rt?.replace("RT ", "")} / {h.rw?.replace("RW ", "")}
                   </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={h.statusPerubahan === "berubah" ? "destructive" : "outline"}
-                      className="text-[10px] whitespace-nowrap"
-                    >
-                      {h.statusPerubahan === "berubah" ? "Berubah" : "Tidak Berubah"}
-                    </Badge>
+                  <TableCell className="text-right font-mono text-xs">
+                    {h.luasBangunan ? <>{h.luasBangunan} <span className="text-muted-foreground">m²</span></> : <span className="text-muted-foreground">—</span>}
                   </TableCell>
-                  <TableCell className="max-w-[140px] truncate text-xs" title={getJenisLabel(h)}>
-                    {getJenisLabel(h)}
+                  <TableCell className="text-right font-mono text-xs">
+                    {h.luasLahan ? <>{h.luasLahan} <span className="text-muted-foreground">m²</span></> : <span className="text-muted-foreground">—</span>}
                   </TableCell>
-                  <TableCell className="text-xs">{h.kondisiBangunan}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className="font-mono text-[10px]"
-                      style={{ color: klasterColor(h.klaster), borderColor: klasterColor(h.klaster) }}
-                    >
-                      {h.klaster}
-                    </Badge>
-                  </TableCell>
+                  <TableCell className="text-xs text-center">{h.jumlahLantai ?? <span className="text-muted-foreground">—</span>}</TableCell>
+                  <TableCell className="text-xs">{h.jeniLantai ?? <span className="text-muted-foreground">—</span>}</TableCell>
+                  <TableCell className="text-xs">{h.jenisDinding ?? <span className="text-muted-foreground">—</span>}</TableCell>
+                  <TableCell className="text-xs">{h.jenisAtap ?? <span className="text-muted-foreground">—</span>}</TableCell>
+                  <TableCell className="text-xs">{(h as any).jenisPlafon ?? <span className="text-muted-foreground">—</span>}</TableCell>
+                  <TableCell className="text-xs">{h.pagar ?? <span className="text-muted-foreground">—</span>}</TableCell>
+                  <TableCell className="text-xs">{h.kondisiBangunan ?? <span className="text-muted-foreground">—</span>}</TableCell>
                 </TableRow>
               ))
             )}
           </TableBody>
         </Table>
       </div>
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between px-4 py-2.5 border-t bg-muted/10">
-          <span className="text-xs text-muted-foreground">Hal. {page} / {totalPages}</span>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => onPageChange(Math.max(1, page - 1))} disabled={page === 1}>
-              Sebelumnya
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => onPageChange(Math.min(totalPages, page + 1))} disabled={page === totalPages}>
-              Selanjutnya
-            </Button>
-          </div>
-        </div>
-      )}
+      <TablePager page={page} totalPages={totalPages} onPageChange={onPageChange} />
+    </div>
+  );
+}
+
+// ─── Tabel Perubahan — indikator & klaster ───────────────────────────────────
+
+const CHANGE_COLS = [
+  { key: "perubahanPagar",        short: "Pagar" },
+  { key: "perubahanLuasBangunan", short: "L.Bangunan" },
+  { key: "perubahanLuasLahan",    short: "L.Lahan" },
+  { key: "perubahanJumlahLantai", short: "Jml.Lantai" },
+] as const;
+
+function ChangesTable({ data, page, totalPages, onPageChange }: { data: any[]; page: number; totalPages: number; onPageChange: (p: number) => void }) {
+  return (
+    <div className="flex flex-col">
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader className="bg-muted/40">
+            <TableRow>
+              <TableHead className="w-8 text-center text-xs">No.</TableHead>
+              <TableHead className="text-xs min-w-[160px]">Nama KK</TableHead>
+              <TableHead className="text-xs w-16">RT/RW</TableHead>
+              <TableHead className="text-xs w-20 text-center">Klaster</TableHead>
+              {CHANGE_COLS.map((c) => (
+                <TableHead key={c.key} className="text-xs text-center w-24">{c.short}</TableHead>
+              ))}
+              <TableHead className="text-xs text-center w-20">Total</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {data.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4 + CHANGE_COLS.length + 1} className="text-center py-10 text-muted-foreground text-sm">
+                  <div className="flex flex-col items-center gap-2">
+                    <AlertCircle className="w-7 h-7 opacity-30" />
+                    Tidak ada data yang ditemukan.
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : (
+              data.map((h, i) => {
+                const total = CHANGE_COLS.filter((c) => h[c.key]).length;
+                return (
+                  <TableRow key={h.id} className="bg-destructive/[0.02]">
+                    <TableCell className="text-center font-mono text-[11px] text-muted-foreground">{(page - 1) * 10 + i + 1}</TableCell>
+                    <TableCell>
+                      <div className="font-medium text-sm leading-tight">{h.namaKepalaKeluarga}</div>
+                      <div className="text-[10px] text-muted-foreground font-mono">{h.id}</div>
+                    </TableCell>
+                    <TableCell className="font-mono text-xs whitespace-nowrap">
+                      {h.rt?.replace("RT ", "")} / {h.rw?.replace("RW ", "")}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge
+                        variant="outline"
+                        className="font-mono text-[10px]"
+                        style={{ color: klasterColor(h.klaster), borderColor: klasterColor(h.klaster) }}
+                      >
+                        {h.klaster}
+                      </Badge>
+                    </TableCell>
+                    {CHANGE_COLS.map((c) => (
+                      <TableCell key={c.key} className="text-center">
+                        {h[c.key] ? (
+                          <Check className="w-4 h-4 text-destructive mx-auto" />
+                        ) : (
+                          <span className="text-muted-foreground/30 text-sm">—</span>
+                        )}
+                      </TableCell>
+                    ))}
+                    <TableCell className="text-center">
+                      <span
+                        className="inline-flex items-center justify-center w-6 h-6 rounded-full text-[11px] font-bold text-white"
+                        style={{ backgroundColor: total >= 3 ? "#EF4444" : total >= 1 ? "#F59E0B" : "#22C55E" }}
+                      >
+                        {total}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
+      <TablePager page={page} totalPages={totalPages} onPageChange={onPageChange} />
     </div>
   );
 }

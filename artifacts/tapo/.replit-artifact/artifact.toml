@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "TAPO – Boting"
+description = "TAPO (Tagging dan Analisis Perubahan Objek Perumahan) adalah platform WebGIS dashboard untuk memvisualisasikan, menganalisis, dan memfilter data hasil Pendataan Lengkap Perumahan Kelurahan Boting. Menampilkan peta interaktif (Leaflet), grafik perubahan rumah (ApexCharts), tabel data, filter, dan smart insight."
+version = "1.0.0"
+id = "artifacts/tapo"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18355
+
+[services.development]
+run = "pnpm --filter @workspace/tapo run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/tapo", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/tapo/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18355"
+BASE_PATH = "/"

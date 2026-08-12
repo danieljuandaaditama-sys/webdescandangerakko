@@ -1,0 +1,133 @@
+Saya ingin membangun sebuah aplikasi web bernama TAPO
+(Tagging dan Analisis Perubahan Objek Perumahan).
+
+TAPO adalah platform WebGIS untuk mengubah hasil Pendataan Lengkap
+Perumahan menjadi informasi spasial, visualisasi, analisis, dan insight
+yang mudah dipahami.
+
+UNTUK TAHAP PERTAMA:
+
+Saya hanya ingin membangun prototype untuk satu wilayah terlebih dahulu,
+yaitu Kelurahan Boting.
+
+Jangan membuat versi Lagaligo atau Dangerakko terlebih dahulu.
+
+DATA UTAMA:
+
+Saya memiliki dataset hasil Pendataan Lengkap Perumahan Kelurahan Boting
+dalam format Excel.
+
+Dataset tersebut akan menjadi sumber data utama aplikasi.
+
+Jangan membuat angka dummy jika data asli dapat digunakan.
+
+TUJUAN PROTOTYPE:
+
+Prototype TAPO Boting harus mampu:
+
+1. membaca dataset perumahan;
+2. menampilkan jumlah rumah yang terdata;
+3. mengidentifikasi rumah yang mengalami perubahan;
+4. menampilkan jenis perubahan;
+5. menampilkan lokasi rumah pada peta berdasarkan koordinat;
+6. memungkinkan pengguna melakukan filter;
+7. menampilkan informasi detail ketika marker rumah diklik;
+8. menampilkan tabel data;
+9. menampilkan visualisasi perubahan;
+10. menghasilkan smart insight sederhana berdasarkan data yang sedang
+    ditampilkan.
+
+KONSEP UTAMA:
+
+Data mentah
+→ standardisasi data
+→ data tabular
+→ data spasial
+→ visualisasi
+→ filter
+→ analisis
+→ smart insight.
+
+TEKNOLOGI PROTOTYPE:
+
+Frontend:
+- React
+- TypeScript
+- Tailwind CSS
+
+Mapping:
+- Leaflet
+- React Leaflet
+
+Chart:
+- ApexCharts atau library chart yang stabil untuk React
+
+Backend:
+- gunakan backend sederhana terlebih dahulu jika belum diperlukan
+- jangan membuat arsitektur backend kompleks pada tahap pertama
+
+DATABASE:
+
+Jangan langsung membuat PostgreSQL/PostGIS.
+
+Untuk prototype pertama, gunakan struktur data yang sederhana dan mudah
+dikembangkan.
+
+Setelah prototype stabil, baru kita migrasikan ke database spasial.
+
+PRINSIP PENTING:
+
+Saya adalah pengguna yang belum memahami pemrograman secara mendalam.
+
+Karena itu jangan langsung membuat seluruh aplikasi.
+
+Bertindak sebagai Senior Software Architect sekaligus mentor coding.
+
+Pecah pembangunan aplikasi menjadi tahap-tahap kecil.
+
+Pada tahap pertama hanya:
+
+1. membuat struktur project;
+2. membuat halaman utama;
+3. membuat layout dashboard;
+4. menyiapkan struktur data;
+5. menyiapkan komponen peta;
+6. menyiapkan komponen grafik;
+7. menyiapkan komponen tabel.
+
+Jangan membuat fitur kompleks terlebih dahulu.
+
+Jangan membuat authentication.
+
+Jangan membuat sistem user management.
+
+Jangan membuat deployment.
+
+Jangan membuat tiga kelurahan.
+
+Jangan membuat AI yang sebenarnya belum diperlukan.
+
+Jangan membuat data dummy permanen.
+
+Sebelum coding, jelaskan terlebih dahulu:
+
+- struktur project yang akan dibuat;
+- fungsi masing-masing folder;
+- komponen utama;
+- bagaimana data Excel nantinya masuk ke aplikasi;
+- bagaimana data akan mengalir dari dataset sampai dashboard.
+
+Setelah itu, buat implementasi tahap pertama saja.
+
+Pastikan project dapat dijalankan tanpa error.
+
+Jika terdapat error, prioritaskan memperbaiki error tersebut sebelum
+menambahkan fitur baru.
+
+Setelah tahap pertama selesai, berhenti dan laporkan:
+
+1. apa yang sudah dibuat;
+2. file apa saja yang dibuat;
+3. bagaimana menjalankannya;
+4. apa yang belum dibuat;
+5. langkah berikutnya.

@@ -3,13 +3,15 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: TAPO – Tagging dan Analisis Perubahan Objek Perumahan API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: housing
+    description: Housing data for Kelurahan Boting
 paths:
   /healthz:
     get:
@@ -24,6 +26,118 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /housing/boting:
+    get:
+      operationId: listHouses
+      tags: [housing]
+      summary: List all housing records for Kelurahan Boting
+      parameters:
+        - in: query
+          name: statusPerubahan
+          schema:
+            type: string
+            enum: [berubah, tidak_berubah]
+          required: false
+          description: Filter by change status
+        - in: query
+          name: jenisPerubahan
+          schema:
+            type: string
+          required: false
+          description: Filter by type of change
+        - in: query
+          name: kondisiBangunan
+          schema:
+            type: string
+          required: false
+          description: Filter by building condition
+        - in: query
+          name: rt
+          schema:
+            type: string
+          required: false
+          description: Filter by RT
+      responses:
+        "200":
+          description: List of housing records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/House"
+
+  /housing/boting/summary:
+    get:
+      operationId: getHousingSummary
+      tags: [housing]
+      summary: Get summary statistics for Kelurahan Boting
+      responses:
+        "200":
+          description: Summary statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HousingSummary"
+
+  /housing/boting/chart-data:
+    get:
+      operationId: getHousingChartData
+      tags: [housing]
+      summary: Get chart-ready data breakdowns
+      responses:
+        "200":
+          description: Chart data breakdowns
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HousingChartData"
+
+  /housing/boting/changes:
+    get:
+      operationId: listChangedHouses
+      tags: [housing]
+      summary: List only houses that have changed
+      responses:
+        "200":
+          description: List of changed houses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/House"
+
+  /housing/boting/insight:
+    get:
+      operationId: getHousingInsight
+      tags: [housing]
+      summary: Get smart insights from the housing data
+      parameters:
+        - in: query
+          name: statusPerubahan
+          schema:
+            type: string
+          required: false
+        - in: query
+          name: jenisPerubahan
+          schema:
+            type: string
+          required: false
+        - in: query
+          name: rt
+          schema:
+            type: string
+          required: false
+      responses:
+        "200":
+          description: Smart insight text
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HousingInsight"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +148,153 @@ components:
       required:
         - status
 
+    House:
+      type: object
+      required:
+        - id
+        - nomorUrut
+        - namaKepalaKeluarga
+        - alamat
+        - rt
+        - rw
+        - lat
+        - lng
+        - statusPerubahan
+        - kondisiBangunan
+      properties:
+        id:
+          type: string
+        nomorUrut:
+          type: number
+          format: int32
+        namaKepalaKeluarga:
+          type: string
+        alamat:
+          type: string
+        rt:
+          type: string
+        rw:
+          type: string
+        lat:
+          type: number
+        lng:
+          type: number
+        statusPerubahan:
+          type: string
+          enum: [berubah, tidak_berubah]
+        jenisPerubahan:
+          type: ["string", "null"]
+          description: "Type of change: Renovasi, Pembongkaran, Pembangunan Baru, Alih Fungsi"
+        kondisiBangunan:
+          type: string
+          description: "Building condition: Baik, Rusak Ringan, Rusak Berat"
+        tahunDatang:
+          type: ["number", "null"]
+          format: int32
+        keterangan:
+          type: ["string", "null"]
+
+    HousingSummary:
+      type: object
+      required:
+        - totalRumah
+        - rumahBerubah
+        - rumahTidakBerubah
+        - persenPerubahan
+        - byJenisPerubahan
+        - byKondisi
+        - byRt
+      properties:
+        totalRumah:
+          type: number
+          format: int32
+        rumahBerubah:
+          type: number
+          format: int32
+        rumahTidakBerubah:
+          type: number
+          format: int32
+        persenPerubahan:
+          type: number
+        byJenisPerubahan:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryCount"
+        byKondisi:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryCount"
+        byRt:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryCount"
+
+    HousingChartData:
+      type: object
+      required:
+        - jenisPerubahan
+        - kondisiBangunan
+        - statusPerRt
+        - perubahanPerRt
+      properties:
+        jenisPerubahan:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryCount"
+        kondisiBangunan:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryCount"
+        statusPerRt:
+          type: array
+          items:
+            $ref: "#/components/schemas/RtBreakdown"
+        perubahanPerRt:
+          type: array
+          items:
+            $ref: "#/components/schemas/RtBreakdown"
+
+    HousingInsight:
+      type: object
+      required:
+        - poin
+        - ringkasan
+      properties:
+        ringkasan:
+          type: string
+        poin:
+          type: array
+          items:
+            type: string
+
+    CategoryCount:
+      type: object
+      required:
+        - label
+        - jumlah
+      properties:
+        label:
+          type: string
+        jumlah:
+          type: number
+          format: int32
+
+    RtBreakdown:
+      type: object
+      required:
+        - rt
+        - berubah
+        - tidakBerubah
+        - total
+      properties:
+        rt:
+          type: string
+        berubah:
+          type: number
+          format: int32
+        tidakBerubah:
+          type: number
+          format: int32
+        total:
+          type: number
+          format: int32

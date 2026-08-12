@@ -1,44 +1,62 @@
-# [Project name]
+# TAPO – Tagging dan Analisis Perubahan Objek Perumahan
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Platform WebGIS dashboard untuk memvisualisasikan dan menganalisis data Pendataan Lengkap Perumahan Kelurahan Boting, Kota Palopo, Sulawesi Selatan.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- `pnpm --filter @workspace/api-server run dev` — jalankan API server (port 8080)
+- `pnpm --filter @workspace/tapo run dev` — jalankan frontend TAPO (dikelola via workflow)
+- `pnpm run typecheck` — full typecheck semua package
+- `pnpm --filter @workspace/api-spec run codegen` — regenerasi API hooks dan Zod schemas dari OpenAPI spec
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- Frontend: React + Vite + Tailwind CSS (artifacts/tapo)
+- API: Express 5 (artifacts/api-server)
+- Peta: Leaflet + React Leaflet
+- Grafik: Recharts
+- Validation: Zod v3, Orval codegen
+- **Tidak ada database** di Fase 1 — data tersimpan di `artifacts/api-server/src/data/boting.ts`
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `lib/api-spec/openapi.yaml` — sumber kebenaran kontrak API
+- `artifacts/api-server/src/data/boting.ts` — dataset perumahan Kelurahan Boting (sampel, akan diganti data Excel asli)
+- `artifacts/api-server/src/routes/housing.ts` — semua endpoint housing
+- `artifacts/tapo/src/` — seluruh frontend dashboard
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- **Fase 1: data statis** — data disimpan sebagai TypeScript file di server, bukan database. Ini memudahkan penggantian dengan data Excel asli tanpa mengubah arsitektur.
+- **Satu kelurahan dulu** — hanya Kelurahan Boting. Lagaligo dan Dangerakko akan ditambahkan di fase berikutnya.
+- **No auth** — prototype tidak memerlukan autentikasi di tahap pertama.
+- **OpenAPI-first** — semua kontrak API didefinisikan di openapi.yaml, lalu di-generate ke hooks React dan Zod schemas.
+- **Zod v3** — workspace menggunakan Zod v3; hindari `zod.int()` di spec OpenAPI, gunakan `type: number` dengan `format: int32`.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+Dashboard tunggal dengan:
+1. FilterPanel reaktif (status perubahan, jenis perubahan, kondisi bangunan, RT)
+2. Stat cards (total rumah, berubah, tidak berubah, persentase)
+3. Peta Leaflet dengan marker warna-warni (merah = berubah, hijau = tidak berubah)
+4. Grafik perubahan dan kondisi bangunan (Recharts)
+5. Tabel data lengkap
+6. Smart insight panel yang berubah sesuai filter aktif
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Prototype bertahap — jangan langsung buat semua fitur sekaligus
+- Data asli dari Excel belum di-upload; gunakan sampel representatif
+- Tidak perlu authentication, user management, atau deployment di tahap pertama
+- Hanya Kelurahan Boting untuk sekarang (tidak ada Lagaligo/Dangerakko)
+- Koordinat sekitar Kota Palopo: lat ≈ -2.98 to -2.99, lng ≈ 120.19
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Jangan gunakan `type: integer` di OpenAPI spec — akan generate `zod.int()` yang tidak ada di Zod v3. Gunakan `type: number` + `format: int32`.
+- Setelah mengubah `openapi.yaml`, selalu jalankan: `pnpm --filter @workspace/api-spec run codegen`
+- API server tidak menggunakan database di Fase 1; data ada di `src/data/boting.ts`
 
 ## Pointers
 

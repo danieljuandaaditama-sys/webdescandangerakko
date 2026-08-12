@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * TAPO – Tagging dan Analisis Perubahan Objek Perumahan API
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 export interface HealthStatus {
   status: string;
@@ -17,6 +17,18 @@ export const HouseStatusPerubahan = {
   tidak_berubah: 'tidak_berubah',
 } as const;
 
+/**
+ * K1=Tidak/Sedikit Berubah, K2=Perubahan Sedang, K3=Perubahan Signifikan
+ */
+export type HouseKlaster = typeof HouseKlaster[keyof typeof HouseKlaster];
+
+
+export const HouseKlaster = {
+  K1: 'K1',
+  K2: 'K2',
+  K3: 'K3',
+} as const;
+
 export interface House {
   id: string;
   nomorUrut: number;
@@ -27,17 +39,55 @@ export interface House {
   lat: number;
   lng: number;
   statusPerubahan: HouseStatusPerubahan;
+  /** Baik, Rusak Ringan, Rusak Berat */
+  kondisiBangunan: string;
+  /** K1=Tidak/Sedikit Berubah, K2=Perubahan Sedang, K3=Perubahan Signifikan */
+  klaster: HouseKlaster;
+  /** Total number of change types experienced */
+  jumlahJenisPerubahan: number;
   /**
-     * Type of change: Renovasi, Pembongkaran, Pembangunan Baru, Alih Fungsi
+     * Luas bangunan dalam m2
      * @nullable
      */
-  jenisPerubahan?: string | null;
-  /** Building condition: Baik, Rusak Ringan, Rusak Berat */
-  kondisiBangunan: string;
+  luasBangunan?: number | null;
+  /**
+     * Luas lahan dalam m2
+     * @nullable
+     */
+  luasLahan?: number | null;
+  /**
+     * Semen, Keramik, Marmer/Granit, Kayu
+     * @nullable
+     */
+  jeniLantai?: string | null;
+  /**
+     * Tembok, Kayu, Bambu, Seng
+     * @nullable
+     */
+  jenisDinding?: string | null;
+  /** @nullable */
+  jumlahLantai?: number | null;
+  /**
+     * Genteng, Seng, Asbes
+     * @nullable
+     */
+  jenisAtap?: string | null;
+  /**
+     * Ada (Tembok), Ada (Kayu), Tidak Ada
+     * @nullable
+     */
+  pagar?: string | null;
   /** @nullable */
   tahunDatang?: number | null;
   /** @nullable */
   keterangan?: string | null;
+  perubahanPagar: boolean;
+  perubahanLuasBangunan: boolean;
+  perubahanJumlahLantai: boolean;
+  perubahanJenisLantai: boolean;
+  perubahanJenisDinding: boolean;
+  perubahanLuasLahan: boolean;
+  perubahanJenisAtap: boolean;
 }
 
 export interface CategoryCount {
@@ -53,6 +103,9 @@ export interface HousingSummary {
   byJenisPerubahan: CategoryCount[];
   byKondisi: CategoryCount[];
   byRt: CategoryCount[];
+  byKlaster: CategoryCount[];
+  byJenisLantai: CategoryCount[];
+  byJenisDinding: CategoryCount[];
 }
 
 export interface RtBreakdown {
@@ -66,7 +119,7 @@ export interface HousingChartData {
   jenisPerubahan: CategoryCount[];
   kondisiBangunan: CategoryCount[];
   statusPerRt: RtBreakdown[];
-  perubahanPerRt: RtBreakdown[];
+  klasterDistribution: CategoryCount[];
 }
 
 export interface HousingInsight {
@@ -74,23 +127,36 @@ export interface HousingInsight {
   poin: string[];
 }
 
+export interface VariabelMetadata {
+  nama: string;
+  deskripsi: string;
+  tipe: string;
+  /** @nullable */
+  nilaiValid?: string | null;
+}
+
+export interface DatasetMetadata {
+  namaDataset: string;
+  periodeData: string;
+  sumberData: string;
+  unitObservasi: string;
+  cakupanWilayah: string;
+  jumlahObservasi: number;
+  informasiKoordinat: string;
+  /** @nullable */
+  keteranganIndikator?: string | null;
+  variabel: VariabelMetadata[];
+}
+
 export type ListHousesParams = {
-/**
- * Filter by change status
- */
 statusPerubahan?: ListHousesStatusPerubahan;
-/**
- * Filter by type of change
- */
-jenisPerubahan?: string;
-/**
- * Filter by building condition
- */
+jenisPerubahan?: ListHousesJenisPerubahan;
 kondisiBangunan?: string;
-/**
- * Filter by RT
- */
 rt?: string;
+rw?: string;
+klaster?: ListHousesKlaster;
+jeniLantai?: string;
+jenisDinding?: string;
 };
 
 export type ListHousesStatusPerubahan = typeof ListHousesStatusPerubahan[keyof typeof ListHousesStatusPerubahan];
@@ -101,9 +167,33 @@ export const ListHousesStatusPerubahan = {
   tidak_berubah: 'tidak_berubah',
 } as const;
 
+export type ListHousesJenisPerubahan = typeof ListHousesJenisPerubahan[keyof typeof ListHousesJenisPerubahan];
+
+
+export const ListHousesJenisPerubahan = {
+  perubahanPagar: 'perubahanPagar',
+  perubahanLuasBangunan: 'perubahanLuasBangunan',
+  perubahanJumlahLantai: 'perubahanJumlahLantai',
+  perubahanJenisLantai: 'perubahanJenisLantai',
+  perubahanJenisDinding: 'perubahanJenisDinding',
+  perubahanLuasLahan: 'perubahanLuasLahan',
+  perubahanJenisAtap: 'perubahanJenisAtap',
+} as const;
+
+export type ListHousesKlaster = typeof ListHousesKlaster[keyof typeof ListHousesKlaster];
+
+
+export const ListHousesKlaster = {
+  K1: 'K1',
+  K2: 'K2',
+  K3: 'K3',
+} as const;
+
 export type GetHousingInsightParams = {
 statusPerubahan?: string;
 jenisPerubahan?: string;
 rt?: string;
+rw?: string;
+klaster?: string;
 };
 

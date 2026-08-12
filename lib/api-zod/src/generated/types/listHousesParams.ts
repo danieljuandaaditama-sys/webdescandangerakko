@@ -3,25 +3,19 @@
  * Do not edit manually.
  * Api
  * TAPO – Tagging dan Analisis Perubahan Objek Perumahan API
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
+import type { ListHousesJenisPerubahan } from './listHousesJenisPerubahan';
+import type { ListHousesKlaster } from './listHousesKlaster';
 import type { ListHousesStatusPerubahan } from './listHousesStatusPerubahan';
 
 export type ListHousesParams = {
-/**
- * Filter by change status
- */
 statusPerubahan?: ListHousesStatusPerubahan;
-/**
- * Filter by type of change
- */
-jenisPerubahan?: string;
-/**
- * Filter by building condition
- */
+jenisPerubahan?: ListHousesJenisPerubahan;
 kondisiBangunan?: string;
-/**
- * Filter by RT
- */
 rt?: string;
+rw?: string;
+klaster?: ListHousesKlaster;
+jeniLantai?: string;
+jenisDinding?: string;
 };

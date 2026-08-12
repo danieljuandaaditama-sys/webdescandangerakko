@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * TAPO – Tagging dan Analisis Perubahan Objek Perumahan API
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 import type { CategoryCount } from './categoryCount';
 import type { RtBreakdown } from './rtBreakdown';
@@ -12,5 +12,5 @@ export interface HousingChartData {
   jenisPerubahan: CategoryCount[];
   kondisiBangunan: CategoryCount[];
   statusPerRt: RtBreakdown[];
-  perubahanPerRt: RtBreakdown[];
+  klasterDistribution: CategoryCount[];
 }

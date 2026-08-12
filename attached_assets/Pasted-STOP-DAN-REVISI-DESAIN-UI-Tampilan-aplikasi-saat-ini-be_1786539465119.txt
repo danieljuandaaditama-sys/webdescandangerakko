@@ -1,0 +1,533 @@
+STOP DAN REVISI DESAIN UI.
+
+Tampilan aplikasi saat ini belum sesuai dengan rancangan TAPO yang saya inginkan.
+
+Jangan mempertahankan layout dashboard saat ini hanya dengan menambahkan
+beberapa card. Saya ingin struktur halaman TAPO diubah agar mengikuti
+konsep desain yang saya jelaskan di bawah.
+
+TAPO bukan hanya dashboard statistik sederhana.
+
+TAPO adalah dashboard analisis spasial perubahan rumah yang memiliki
+TIGA KOMPONEN UTAMA:
+
+1. DASHBOARD PERUBAHAN RUMAH
+2. SMART MAP
+3. PETA TAGGING LOCATION
+
+Tambahkan juga:
+- Tabel data
+- Peta klasterisasi
+- Smart Insight
+- Metadata
+
+==================================================
+KONSEP TAMPILAN UTAMA
+==================================================
+
+Gunakan desain dashboard profesional seperti dashboard statistik/WebGIS.
+
+Gunakan:
+- warna utama biru;
+- card dengan border radius;
+- layout grid;
+- typography modern;
+- whitespace yang cukup;
+- section title yang jelas;
+- icon sederhana;
+- visual hierarchy yang kuat.
+
+Jangan membuat tampilan seperti form aplikasi biasa.
+
+Jangan membuat semua komponen tersusun vertikal panjang.
+
+Dashboard harus terasa seperti satu dashboard analitik profesional.
+
+==================================================
+NAVIGASI UTAMA
+==================================================
+
+Buat navigation bar yang jelas:
+
+TAPO | Kelurahan Boting
+
+Menu:
+
+[Dashboard]
+[Smart Map]
+[Data Perumahan]
+[Metadata]
+
+Dashboard adalah halaman awal.
+
+Smart Map harus menjadi halaman/modul utama tersendiri.
+
+==================================================
+HALAMAN 1 — DASHBOARD PERUBAHAN RUMAH
+==================================================
+
+Bagian paling atas:
+
+TAPO
+Kelurahan Boting
+Dashboard Perubahan Rumah
+
+Kemudian SUMMARY CARDS.
+
+Card pertama:
+
+TOTAL RUMAH TERDATA
+contoh:
+586
+
+Card kedua:
+
+RUMAH MENGALAMI PERUBAHAN
+contoh:
+76
+
+Card berikutnya harus menampilkan jumlah berdasarkan kategori
+perubahan yang benar-benar tersedia di dataset.
+
+Contohnya:
+
+Perubahan Pagar
+Perubahan Luas Bangunan
+Perubahan Jumlah Lantai
+Perubahan Jenis Lantai
+Perubahan Jenis Dinding
+Perubahan Luas Lahan
+Perubahan Jenis Atap
+
+PENTING:
+
+Jangan menggunakan angka contoh secara permanen.
+
+Semua angka harus dihitung secara otomatis dari dataset Boting.
+
+==================================================
+SECTION — GRAFIK DISTRIBUSI PERUBAHAN
+==================================================
+
+Buat section:
+
+"Distribusi Perubahan Rumah"
+
+Gunakan donut chart.
+
+Donut chart menunjukkan proporsi jenis perubahan rumah.
+
+Di samping donut chart tampilkan legenda:
+
+- Perubahan Pagar
+- Perubahan Luas Bangunan
+- Perubahan Jumlah Lantai
+- Perubahan Jenis Lantai
+- Perubahan Jenis Dinding
+- Perubahan Luas Lahan
+- Perubahan Jenis Atap
+
+Hanya tampilkan kategori yang benar-benar tersedia pada dataset.
+
+==================================================
+SMART INSIGHT
+==================================================
+
+Di samping grafik buat card:
+
+SMART INSIGHT
+
+Insight harus dihitung berdasarkan data.
+
+Contoh format:
+
+"Dari 76 rumah yang mengalami perubahan,
+perubahan yang paling dominan adalah Perubahan Pagar."
+
+Insight tidak boleh hardcoded.
+
+Jika filter berubah, insight juga harus berubah.
+
+==================================================
+SECTION — TABEL DATA
+==================================================
+
+Buat section:
+
+"Tabel Data Terstruktur"
+
+Bagi menjadi dua tab:
+
+[Seluruh Rumah]
+[Rumah Mengalami Perubahan]
+
+Tabel harus memiliki:
+
+- search;
+- pagination;
+- sorting;
+- filter.
+
+Kolom disesuaikan dengan dataset asli.
+
+==================================================
+SECTION — ANALISIS SPASIAL
+==================================================
+
+Setelah tabel, tampilkan tiga card/panel utama:
+
+1. Peta Klasterisasi Spasial
+2. Smart Map
+3. Peta Tagging Location
+
+Ketiga bagian ini harus berbeda fungsi.
+
+==================================================
+1. PETA KLASTERISASI SPASIAL
+==================================================
+
+Peta ini digunakan untuk menunjukkan pengelompokan rumah berdasarkan
+tingkat/perilaku perubahan.
+
+Gunakan marker atau simbol berdasarkan cluster.
+
+Contoh tampilan legenda:
+
+K1 — Tidak/Sedikit Mengalami Perubahan
+K2 — Perubahan Sedang
+K3 — Perubahan Signifikan
+
+JANGAN menetapkan threshold secara sembarangan.
+
+Untuk sementara siapkan struktur cluster sehingga metode klasifikasi
+dapat diganti setelah analisis dataset selesai.
+
+Peta harus menggunakan koordinat asli dari dataset.
+
+==================================================
+2. SMART MAP — FITUR UTAMA
+==================================================
+
+INI SANGAT PENTING.
+
+Smart Map bukan hanya peta biasa.
+
+Buat halaman/module Smart Map khusus.
+
+Header:
+
+SMART MAP
+
+Di bagian atas peta terdapat kontrol:
+
+[Filter Peta ▼]
+
+Pilihan:
+
+- Semua Rumah
+- Rumah Mengalami Perubahan
+- Perubahan Pagar
+- Perubahan Luas Bangunan
+- Perubahan Jumlah Lantai
+- Perubahan Jenis Lantai
+- Perubahan Jenis Dinding
+- Perubahan Luas Lahan
+- Perubahan Jenis Atap
+
+Tambahkan filter:
+
+[RT ▼]
+[RW ▼]
+
+Tambahkan juga search.
+
+Ketika pengguna memilih filter, marker pada peta harus berubah
+secara otomatis.
+
+==================================================
+SMART MAP — VISUALISASI
+==================================================
+
+Gunakan Leaflet / React Leaflet.
+
+Tampilkan marker rumah berdasarkan koordinat asli.
+
+Marker harus memiliki warna berdasarkan kategori yang sedang dipilih.
+
+Contoh:
+
+Jika pengguna memilih "Jenis Lantai":
+
+marker menunjukkan kategori:
+
+- Semen
+- Keramik
+- Marmer/Granit
+- Kayu
+- lainnya sesuai dataset
+
+Jika pengguna memilih "Perubahan Pagar":
+
+marker menunjukkan:
+
+- Mengalami perubahan
+- Tidak mengalami perubahan
+
+Jangan membuat kategori yang tidak terdapat dalam dataset.
+
+==================================================
+SMART MAP — POPUP
+==================================================
+
+Ketika marker diklik, tampilkan popup/card detail:
+
+ID Rumah
+RT
+RW
+Nama/identitas yang tersedia pada dataset
+
+Luas Bangunan
+Luas Lahan
+Jenis Lantai
+Jenis Dinding
+Jumlah Lantai
+Jenis Atap
+Pagar
+
+Kemudian:
+
+STATUS PERUBAHAN
+
+✓ Perubahan Pagar
+✓ Perubahan Luas Bangunan
+✗ Perubahan Jumlah Lantai
+dst.
+
+Informasi harus berasal dari data rumah yang diklik.
+
+==================================================
+SMART MAP — SMART INSIGHT
+==================================================
+
+Di samping peta buat panel:
+
+SMART INSIGHT PER FILTER
+
+Contoh:
+
+"Sebanyak 120 rumah memiliki luas bangunan <100 m²."
+
+"Persebaran rumah dengan perubahan pagar paling banyak ditemukan
+di RT 03."
+
+Insight harus dihitung secara dinamis.
+
+Jika pengguna mengubah filter,
+Smart Insight ikut berubah.
+
+==================================================
+3. PETA TAGGING LOCATION
+==================================================
+
+Buat panel terpisah:
+
+PETA TAGGING LOCATION
+
+Fungsinya menampilkan titik lokasi rumah.
+
+Marker dapat dibedakan berdasarkan atribut tertentu.
+
+Contoh:
+
+Jenis lantai:
+
+Semen
+Keramik
+Marmer/Granit
+Kayu
+
+Marker harus memiliki legenda.
+
+Ketika marker diklik:
+tampilkan detail rumah.
+
+==================================================
+SWITCH MAP
+==================================================
+
+Sediakan kontrol:
+
+[Smart Map ▼]
+
+yang memungkinkan pengguna berpindah perspektif:
+
+- Peta Perubahan Rumah
+- Peta Jenis Lantai
+- Peta Jenis Dinding
+- Peta Luas Bangunan
+- Peta Jumlah Lantai
+- Peta Luas Lahan
+- Peta Jenis Atap
+
+Semua menggunakan satu komponen map engine,
+tetapi layer/warna/marker berubah berdasarkan pilihan.
+
+==================================================
+FILTER INTERAKTIF
+==================================================
+
+Filter harus bersifat global pada modul Smart Map.
+
+Contoh:
+
+Pengguna memilih:
+
+RT = 03
+Jenis perubahan = Perubahan Pagar
+
+Maka:
+
+- marker peta berubah;
+- jumlah rumah berubah;
+- tabel berubah;
+- grafik jika relevan berubah;
+- Smart Insight berubah.
+
+==================================================
+METADATA
+==================================================
+
+Buat halaman Metadata.
+
+Tampilkan:
+
+- nama dataset;
+- periode data;
+- sumber data;
+- unit observasi;
+- definisi variabel;
+- cakupan wilayah;
+- jumlah observasi;
+- informasi koordinat;
+- keterangan indikator perubahan.
+
+Gunakan data/metadata yang tersedia.
+
+Jangan mengarang metadata yang tidak diberikan.
+
+==================================================
+DATA ASLI
+==================================================
+
+Jangan mengubah dataset asli.
+
+Pisahkan:
+
+RAW DATA
+
+dan
+
+PROCESSED DATA.
+
+Semua visualisasi harus menggunakan data hasil pemrosesan yang
+dapat ditelusuri kembali ke dataset asli.
+
+==================================================
+ARSITEKTUR KOMPONEN
+==================================================
+
+Buat struktur komponen:
+
+Dashboard
+├── SummaryCards
+├── ChangeDistributionChart
+├── SmartInsight
+├── DataTable
+├── ChangeTable
+├── ClusterMap
+├── SmartMap
+├── TaggingMap
+└── Metadata
+
+SmartMap harus dibuat sebagai reusable component.
+
+Jangan membuat tiga map dengan kode yang sama berulang-ulang.
+
+Gunakan satu map engine yang dapat menerima:
+
+- data;
+- filter;
+- mode;
+- color mapping;
+- popup content;
+- legend.
+
+==================================================
+RESPONSIVE DESIGN
+==================================================
+
+Desktop adalah prioritas utama.
+
+Namun dashboard harus tetap usable pada tablet.
+
+==================================================
+HAL YANG TIDAK BOLEH DILAKUKAN
+==================================================
+
+Jangan:
+
+- membuat dashboard hanya berupa card vertikal;
+- membuat satu peta besar tanpa fungsi Smart Map;
+- menghilangkan Smart Map;
+- menghilangkan Peta Tagging Location;
+- menghilangkan Peta Klasterisasi;
+- menggunakan angka dummy sebagai data final;
+- membuat insight hardcoded;
+- membuat filter yang tidak berfungsi;
+- membuat halaman terlalu panjang tanpa struktur section;
+- membuat semua fungsi berada pada satu halaman tanpa navigasi.
+
+==================================================
+TARGET AKHIR
+==================================================
+
+Ketika pengguna membuka TAPO Boting,
+mereka harus langsung memahami bahwa aplikasi ini adalah:
+
+"DASHBOARD ANALISIS SPASIAL PERUBAHAN RUMAH"
+
+bukan sekadar dashboard angka dan peta.
+
+Visual hierarchy harus:
+
+Dashboard
+↓
+Ringkasan
+↓
+Grafik + Smart Insight
+↓
+Tabel
+↓
+Analisis Spasial
+↓
+Smart Map
+↓
+Tagging Location
+
+Dan Smart Map harus menjadi salah satu fitur utama aplikasi,
+bukan sekadar gambar peta.
+
+Setelah melakukan perubahan,
+JANGAN langsung mengerjakan fitur analisis lanjutan.
+
+Pertama selesaikan:
+1. struktur UI;
+2. navigasi;
+3. Dashboard;
+4. Smart Map;
+5. Peta Klasterisasi;
+6. Peta Tagging Location.
+
+Kemudian jalankan aplikasi dan pastikan tidak ada error.
+
+Laporkan file yang diubah dan fitur yang sudah berhasil.

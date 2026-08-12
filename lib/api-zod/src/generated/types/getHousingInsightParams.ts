@@ -3,11 +3,13 @@
  * Do not edit manually.
  * Api
  * TAPO – Tagging dan Analisis Perubahan Objek Perumahan API
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 
 export type GetHousingInsightParams = {
 statusPerubahan?: string;
 jenisPerubahan?: string;
 rt?: string;
+rw?: string;
+klaster?: string;
 };

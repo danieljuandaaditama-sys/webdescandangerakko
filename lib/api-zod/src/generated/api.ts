@@ -3,13 +3,12 @@
  * Do not edit manually.
  * Api
  * TAPO – Tagging dan Analisis Perubahan Objek Perumahan API
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 import * as zod from 'zod';
 
 
 /**
- * Returns server health status
  * @summary Health check
  */
 export const HealthCheckResponse = zod.object({
@@ -18,13 +17,17 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
- * @summary List all housing records for Kelurahan Boting
+ * @summary List all housing records with optional filters
  */
 export const ListHousesQueryParams = zod.object({
-  "statusPerubahan": zod.enum(['berubah', 'tidak_berubah']).optional().describe('Filter by change status'),
-  "jenisPerubahan": zod.coerce.string().optional().describe('Filter by type of change'),
-  "kondisiBangunan": zod.coerce.string().optional().describe('Filter by building condition'),
-  "rt": zod.coerce.string().optional().describe('Filter by RT')
+  "statusPerubahan": zod.enum(['berubah', 'tidak_berubah']).optional(),
+  "jenisPerubahan": zod.enum(['perubahanPagar', 'perubahanLuasBangunan', 'perubahanJumlahLantai', 'perubahanJenisLantai', 'perubahanJenisDinding', 'perubahanLuasLahan', 'perubahanJenisAtap']).optional(),
+  "kondisiBangunan": zod.coerce.string().optional(),
+  "rt": zod.coerce.string().optional(),
+  "rw": zod.coerce.string().optional(),
+  "klaster": zod.enum(['K1', 'K2', 'K3']).optional(),
+  "jeniLantai": zod.coerce.string().optional(),
+  "jenisDinding": zod.coerce.string().optional()
 })
 
 export const ListHousesResponseItem = zod.object({
@@ -37,16 +40,31 @@ export const ListHousesResponseItem = zod.object({
   "lat": zod.number(),
   "lng": zod.number(),
   "statusPerubahan": zod.enum(['berubah', 'tidak_berubah']),
-  "jenisPerubahan": zod.string().nullish().describe('Type of change: Renovasi, Pembongkaran, Pembangunan Baru, Alih Fungsi'),
-  "kondisiBangunan": zod.string().describe('Building condition: Baik, Rusak Ringan, Rusak Berat'),
+  "kondisiBangunan": zod.string().describe('Baik, Rusak Ringan, Rusak Berat'),
+  "klaster": zod.enum(['K1', 'K2', 'K3']).describe('K1=Tidak\/Sedikit Berubah, K2=Perubahan Sedang, K3=Perubahan Signifikan'),
+  "jumlahJenisPerubahan": zod.number().describe('Total number of change types experienced'),
+  "luasBangunan": zod.number().nullish().describe('Luas bangunan dalam m2'),
+  "luasLahan": zod.number().nullish().describe('Luas lahan dalam m2'),
+  "jeniLantai": zod.string().nullish().describe('Semen, Keramik, Marmer\/Granit, Kayu'),
+  "jenisDinding": zod.string().nullish().describe('Tembok, Kayu, Bambu, Seng'),
+  "jumlahLantai": zod.number().nullish(),
+  "jenisAtap": zod.string().nullish().describe('Genteng, Seng, Asbes'),
+  "pagar": zod.string().nullish().describe('Ada (Tembok), Ada (Kayu), Tidak Ada'),
   "tahunDatang": zod.number().nullish(),
-  "keterangan": zod.string().nullish()
+  "keterangan": zod.string().nullish(),
+  "perubahanPagar": zod.boolean(),
+  "perubahanLuasBangunan": zod.boolean(),
+  "perubahanJumlahLantai": zod.boolean(),
+  "perubahanJenisLantai": zod.boolean(),
+  "perubahanJenisDinding": zod.boolean(),
+  "perubahanLuasLahan": zod.boolean(),
+  "perubahanJenisAtap": zod.boolean()
 })
 export const ListHousesResponse = zod.array(ListHousesResponseItem)
 
 
 /**
- * @summary Get summary statistics for Kelurahan Boting
+ * @summary Get summary statistics
  */
 export const GetHousingSummaryResponse = zod.object({
   "totalRumah": zod.number(),
@@ -64,12 +82,24 @@ export const GetHousingSummaryResponse = zod.object({
   "byRt": zod.array(zod.object({
   "label": zod.string(),
   "jumlah": zod.number()
+})),
+  "byKlaster": zod.array(zod.object({
+  "label": zod.string(),
+  "jumlah": zod.number()
+})),
+  "byJenisLantai": zod.array(zod.object({
+  "label": zod.string(),
+  "jumlah": zod.number()
+})),
+  "byJenisDinding": zod.array(zod.object({
+  "label": zod.string(),
+  "jumlah": zod.number()
 }))
 })
 
 
 /**
- * @summary Get chart-ready data breakdowns
+ * @summary Get chart-ready breakdowns
  */
 export const GetHousingChartDataResponse = zod.object({
   "jenisPerubahan": zod.array(zod.object({
@@ -86,11 +116,9 @@ export const GetHousingChartDataResponse = zod.object({
   "tidakBerubah": zod.number(),
   "total": zod.number()
 })),
-  "perubahanPerRt": zod.array(zod.object({
-  "rt": zod.string(),
-  "berubah": zod.number(),
-  "tidakBerubah": zod.number(),
-  "total": zod.number()
+  "klasterDistribution": zod.array(zod.object({
+  "label": zod.string(),
+  "jumlah": zod.number()
 }))
 })
 
@@ -108,26 +136,64 @@ export const ListChangedHousesResponseItem = zod.object({
   "lat": zod.number(),
   "lng": zod.number(),
   "statusPerubahan": zod.enum(['berubah', 'tidak_berubah']),
-  "jenisPerubahan": zod.string().nullish().describe('Type of change: Renovasi, Pembongkaran, Pembangunan Baru, Alih Fungsi'),
-  "kondisiBangunan": zod.string().describe('Building condition: Baik, Rusak Ringan, Rusak Berat'),
+  "kondisiBangunan": zod.string().describe('Baik, Rusak Ringan, Rusak Berat'),
+  "klaster": zod.enum(['K1', 'K2', 'K3']).describe('K1=Tidak\/Sedikit Berubah, K2=Perubahan Sedang, K3=Perubahan Signifikan'),
+  "jumlahJenisPerubahan": zod.number().describe('Total number of change types experienced'),
+  "luasBangunan": zod.number().nullish().describe('Luas bangunan dalam m2'),
+  "luasLahan": zod.number().nullish().describe('Luas lahan dalam m2'),
+  "jeniLantai": zod.string().nullish().describe('Semen, Keramik, Marmer\/Granit, Kayu'),
+  "jenisDinding": zod.string().nullish().describe('Tembok, Kayu, Bambu, Seng'),
+  "jumlahLantai": zod.number().nullish(),
+  "jenisAtap": zod.string().nullish().describe('Genteng, Seng, Asbes'),
+  "pagar": zod.string().nullish().describe('Ada (Tembok), Ada (Kayu), Tidak Ada'),
   "tahunDatang": zod.number().nullish(),
-  "keterangan": zod.string().nullish()
+  "keterangan": zod.string().nullish(),
+  "perubahanPagar": zod.boolean(),
+  "perubahanLuasBangunan": zod.boolean(),
+  "perubahanJumlahLantai": zod.boolean(),
+  "perubahanJenisLantai": zod.boolean(),
+  "perubahanJenisDinding": zod.boolean(),
+  "perubahanLuasLahan": zod.boolean(),
+  "perubahanJenisAtap": zod.boolean()
 })
 export const ListChangedHousesResponse = zod.array(ListChangedHousesResponseItem)
 
 
 /**
- * @summary Get smart insights from the housing data
+ * @summary Smart insight based on active filters
  */
 export const GetHousingInsightQueryParams = zod.object({
   "statusPerubahan": zod.coerce.string().optional(),
   "jenisPerubahan": zod.coerce.string().optional(),
-  "rt": zod.coerce.string().optional()
+  "rt": zod.coerce.string().optional(),
+  "rw": zod.coerce.string().optional(),
+  "klaster": zod.coerce.string().optional()
 })
 
 export const GetHousingInsightResponse = zod.object({
   "ringkasan": zod.string(),
   "poin": zod.array(zod.string())
+})
+
+
+/**
+ * @summary Get dataset metadata
+ */
+export const GetHousingMetadataResponse = zod.object({
+  "namaDataset": zod.string(),
+  "periodeData": zod.string(),
+  "sumberData": zod.string(),
+  "unitObservasi": zod.string(),
+  "cakupanWilayah": zod.string(),
+  "jumlahObservasi": zod.number(),
+  "informasiKoordinat": zod.string(),
+  "keteranganIndikator": zod.string().nullish(),
+  "variabel": zod.array(zod.object({
+  "nama": zod.string(),
+  "deskripsi": zod.string(),
+  "tipe": zod.string(),
+  "nilaiValid": zod.string().nullish()
+}))
 })
 
 

@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * TAPO – Tagging dan Analisis Perubahan Objek Perumahan API
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 import {
   useQuery
@@ -16,6 +16,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  DatasetMetadata,
   GetHousingInsightParams,
   HealthStatus,
   House,
@@ -61,7 +62,6 @@ export const getHealthCheckUrl = () => {
 }
 
 /**
- * Returns server health status
  * @summary Health check
  */
 export const healthCheck = async ( options?: Parameters<typeof customFetch>[1]): Promise<HealthStatus> => {
@@ -146,7 +146,7 @@ export const getListHousesUrl = (params?: ListHousesParams,) => {
 }
 
 /**
- * @summary List all housing records for Kelurahan Boting
+ * @summary List all housing records with optional filters
  */
 export const listHouses = async (params?: ListHousesParams, options?: Parameters<typeof customFetch>[1]): Promise<House[]> => {
 
@@ -193,7 +193,7 @@ export type ListHousesQueryError = ErrorType<unknown>
 
 
 /**
- * @summary List all housing records for Kelurahan Boting
+ * @summary List all housing records with optional filters
  */
 
 export function useListHouses<TData = Awaited<ReturnType<typeof listHouses>>, TError = ErrorType<unknown>>(
@@ -223,7 +223,7 @@ export const getGetHousingSummaryUrl = () => {
 }
 
 /**
- * @summary Get summary statistics for Kelurahan Boting
+ * @summary Get summary statistics
  */
 export const getHousingSummary = async ( options?: Parameters<typeof customFetch>[1]): Promise<HousingSummary> => {
 
@@ -270,7 +270,7 @@ export type GetHousingSummaryQueryError = ErrorType<unknown>
 
 
 /**
- * @summary Get summary statistics for Kelurahan Boting
+ * @summary Get summary statistics
  */
 
 export function useGetHousingSummary<TData = Awaited<ReturnType<typeof getHousingSummary>>, TError = ErrorType<unknown>>(
@@ -300,7 +300,7 @@ export const getGetHousingChartDataUrl = () => {
 }
 
 /**
- * @summary Get chart-ready data breakdowns
+ * @summary Get chart-ready breakdowns
  */
 export const getHousingChartData = async ( options?: Parameters<typeof customFetch>[1]): Promise<HousingChartData> => {
 
@@ -347,7 +347,7 @@ export type GetHousingChartDataQueryError = ErrorType<unknown>
 
 
 /**
- * @summary Get chart-ready data breakdowns
+ * @summary Get chart-ready breakdowns
  */
 
 export function useGetHousingChartData<TData = Awaited<ReturnType<typeof getHousingChartData>>, TError = ErrorType<unknown>>(
@@ -461,7 +461,7 @@ export const getGetHousingInsightUrl = (params?: GetHousingInsightParams,) => {
 }
 
 /**
- * @summary Get smart insights from the housing data
+ * @summary Smart insight based on active filters
  */
 export const getHousingInsight = async (params?: GetHousingInsightParams, options?: Parameters<typeof customFetch>[1]): Promise<HousingInsight> => {
 
@@ -508,7 +508,7 @@ export type GetHousingInsightQueryError = ErrorType<unknown>
 
 
 /**
- * @summary Get smart insights from the housing data
+ * @summary Smart insight based on active filters
  */
 
 export function useGetHousingInsight<TData = Awaited<ReturnType<typeof getHousingInsight>>, TError = ErrorType<unknown>>(
@@ -517,6 +517,83 @@ export function useGetHousingInsight<TData = Awaited<ReturnType<typeof getHousin
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetHousingInsightQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetHousingMetadataUrl = () => {
+
+
+
+
+  return `/api/housing/boting/metadata`
+}
+
+/**
+ * @summary Get dataset metadata
+ */
+export const getHousingMetadata = async ( options?: Parameters<typeof customFetch>[1]): Promise<DatasetMetadata> => {
+
+  return customFetch<DatasetMetadata>(getGetHousingMetadataUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetHousingMetadataQueryKey = () => {
+    return [
+    `/api/housing/boting/metadata`
+    ] as const;
+    }
+
+
+export const getGetHousingMetadataQueryOptions = <TData = Awaited<ReturnType<typeof getHousingMetadata>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHousingMetadata>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetHousingMetadataQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getHousingMetadata>>> = ({ signal }) => getHousingMetadata({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getHousingMetadata>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetHousingMetadataQueryResult = NonNullable<Awaited<ReturnType<typeof getHousingMetadata>>>
+export type GetHousingMetadataQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get dataset metadata
+ */
+
+export function useGetHousingMetadata<TData = Awaited<ReturnType<typeof getHousingMetadata>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHousingMetadata>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetHousingMetadataQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

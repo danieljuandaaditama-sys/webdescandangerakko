@@ -3,17 +3,22 @@
  * Do not edit manually.
  * Api
  * TAPO – Tagging dan Analisis Perubahan Objek Perumahan API
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 
 export * from './categoryCount';
+export * from './datasetMetadata';
 export * from './getHousingInsightParams';
 export * from './healthStatus';
 export * from './house';
+export * from './houseKlaster';
 export * from './houseStatusPerubahan';
 export * from './housingChartData';
 export * from './housingInsight';
 export * from './housingSummary';
+export * from './listHousesJenisPerubahan';
+export * from './listHousesKlaster';
 export * from './listHousesParams';
 export * from './listHousesStatusPerubahan';
 export * from './rtBreakdown';
+export * from './variabelMetadata';

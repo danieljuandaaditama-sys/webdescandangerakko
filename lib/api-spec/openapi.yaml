@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
-  version: 0.1.0
+  version: 0.2.0
   description: TAPO – Tagging dan Analisis Perubahan Objek Perumahan API
 servers:
   - url: /api
@@ -18,7 +18,6 @@ paths:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -31,7 +30,7 @@ paths:
     get:
       operationId: listHouses
       tags: [housing]
-      summary: List all housing records for Kelurahan Boting
+      summary: List all housing records with optional filters
       parameters:
         - in: query
           name: statusPerubahan
@@ -39,25 +38,52 @@ paths:
             type: string
             enum: [berubah, tidak_berubah]
           required: false
-          description: Filter by change status
         - in: query
           name: jenisPerubahan
           schema:
             type: string
+            enum:
+              [
+                perubahanPagar,
+                perubahanLuasBangunan,
+                perubahanJumlahLantai,
+                perubahanJenisLantai,
+                perubahanJenisDinding,
+                perubahanLuasLahan,
+                perubahanJenisAtap,
+              ]
           required: false
-          description: Filter by type of change
         - in: query
           name: kondisiBangunan
           schema:
             type: string
           required: false
-          description: Filter by building condition
         - in: query
           name: rt
           schema:
             type: string
           required: false
-          description: Filter by RT
+        - in: query
+          name: rw
+          schema:
+            type: string
+          required: false
+        - in: query
+          name: klaster
+          schema:
+            type: string
+            enum: [K1, K2, K3]
+          required: false
+        - in: query
+          name: jeniLantai
+          schema:
+            type: string
+          required: false
+        - in: query
+          name: jenisDinding
+          schema:
+            type: string
+          required: false
       responses:
         "200":
           description: List of housing records
@@ -72,7 +98,7 @@ paths:
     get:
       operationId: getHousingSummary
       tags: [housing]
-      summary: Get summary statistics for Kelurahan Boting
+      summary: Get summary statistics
       responses:
         "200":
           description: Summary statistics
@@ -85,10 +111,10 @@ paths:
     get:
       operationId: getHousingChartData
       tags: [housing]
-      summary: Get chart-ready data breakdowns
+      summary: Get chart-ready breakdowns
       responses:
         "200":
-          description: Chart data breakdowns
+          description: Chart data
           content:
             application/json:
               schema:
@@ -101,7 +127,7 @@ paths:
       summary: List only houses that have changed
       responses:
         "200":
-          description: List of changed houses
+          description: Changed houses
           content:
             application/json:
               schema:
@@ -113,7 +139,7 @@ paths:
     get:
       operationId: getHousingInsight
       tags: [housing]
-      summary: Get smart insights from the housing data
+      summary: Smart insight based on active filters
       parameters:
         - in: query
           name: statusPerubahan
@@ -130,13 +156,36 @@ paths:
           schema:
             type: string
           required: false
+        - in: query
+          name: rw
+          schema:
+            type: string
+          required: false
+        - in: query
+          name: klaster
+          schema:
+            type: string
+          required: false
       responses:
         "200":
-          description: Smart insight text
+          description: Smart insight
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/HousingInsight"
+
+  /housing/boting/metadata:
+    get:
+      operationId: getHousingMetadata
+      tags: [housing]
+      summary: Get dataset metadata
+      responses:
+        "200":
+          description: Dataset metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DatasetMetadata"
 
 components:
   schemas:
@@ -161,6 +210,15 @@ components:
         - lng
         - statusPerubahan
         - kondisiBangunan
+        - klaster
+        - perubahanPagar
+        - perubahanLuasBangunan
+        - perubahanJumlahLantai
+        - perubahanJenisLantai
+        - perubahanJenisDinding
+        - perubahanLuasLahan
+        - perubahanJenisAtap
+        - jumlahJenisPerubahan
       properties:
         id:
           type: string
@@ -182,17 +240,57 @@ components:
         statusPerubahan:
           type: string
           enum: [berubah, tidak_berubah]
-        jenisPerubahan:
-          type: ["string", "null"]
-          description: "Type of change: Renovasi, Pembongkaran, Pembangunan Baru, Alih Fungsi"
         kondisiBangunan:
           type: string
-          description: "Building condition: Baik, Rusak Ringan, Rusak Berat"
+          description: "Baik, Rusak Ringan, Rusak Berat"
+        klaster:
+          type: string
+          enum: [K1, K2, K3]
+          description: "K1=Tidak/Sedikit Berubah, K2=Perubahan Sedang, K3=Perubahan Signifikan"
+        jumlahJenisPerubahan:
+          type: number
+          format: int32
+          description: Total number of change types experienced
+        luasBangunan:
+          type: ["number", "null"]
+          description: Luas bangunan dalam m2
+        luasLahan:
+          type: ["number", "null"]
+          description: Luas lahan dalam m2
+        jeniLantai:
+          type: ["string", "null"]
+          description: "Semen, Keramik, Marmer/Granit, Kayu"
+        jenisDinding:
+          type: ["string", "null"]
+          description: "Tembok, Kayu, Bambu, Seng"
+        jumlahLantai:
+          type: ["number", "null"]
+          format: int32
+        jenisAtap:
+          type: ["string", "null"]
+          description: "Genteng, Seng, Asbes"
+        pagar:
+          type: ["string", "null"]
+          description: "Ada (Tembok), Ada (Kayu), Tidak Ada"
         tahunDatang:
           type: ["number", "null"]
           format: int32
         keterangan:
           type: ["string", "null"]
+        perubahanPagar:
+          type: boolean
+        perubahanLuasBangunan:
+          type: boolean
+        perubahanJumlahLantai:
+          type: boolean
+        perubahanJenisLantai:
+          type: boolean
+        perubahanJenisDinding:
+          type: boolean
+        perubahanLuasLahan:
+          type: boolean
+        perubahanJenisAtap:
+          type: boolean
 
     HousingSummary:
       type: object
@@ -204,6 +302,9 @@ components:
         - byJenisPerubahan
         - byKondisi
         - byRt
+        - byKlaster
+        - byJenisLantai
+        - byJenisDinding
       properties:
         totalRumah:
           type: number
@@ -228,6 +329,18 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/CategoryCount"
+        byKlaster:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryCount"
+        byJenisLantai:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryCount"
+        byJenisDinding:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryCount"
 
     HousingChartData:
       type: object
@@ -235,7 +348,7 @@ components:
         - jenisPerubahan
         - kondisiBangunan
         - statusPerRt
-        - perubahanPerRt
+        - klasterDistribution
       properties:
         jenisPerubahan:
           type: array
@@ -249,16 +362,16 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/RtBreakdown"
-        perubahanPerRt:
+        klasterDistribution:
           type: array
           items:
-            $ref: "#/components/schemas/RtBreakdown"
+            $ref: "#/components/schemas/CategoryCount"
 
     HousingInsight:
       type: object
       required:
-        - poin
         - ringkasan
+        - poin
       properties:
         ringkasan:
           type: string
@@ -266,6 +379,56 @@ components:
           type: array
           items:
             type: string
+
+    DatasetMetadata:
+      type: object
+      required:
+        - namaDataset
+        - periodeData
+        - sumberData
+        - unitObservasi
+        - cakupanWilayah
+        - jumlahObservasi
+        - informasiKoordinat
+        - variabel
+      properties:
+        namaDataset:
+          type: string
+        periodeData:
+          type: string
+        sumberData:
+          type: string
+        unitObservasi:
+          type: string
+        cakupanWilayah:
+          type: string
+        jumlahObservasi:
+          type: number
+          format: int32
+        informasiKoordinat:
+          type: string
+        keteranganIndikator:
+          type: ["string", "null"]
+        variabel:
+          type: array
+          items:
+            $ref: "#/components/schemas/VariabelMetadata"
+
+    VariabelMetadata:
+      type: object
+      required:
+        - nama
+        - deskripsi
+        - tipe
+      properties:
+        nama:
+          type: string
+        deskripsi:
+          type: string
+        tipe:
+          type: string
+        nilaiValid:
+          type: ["string", "null"]
 
     CategoryCount:
       type: object

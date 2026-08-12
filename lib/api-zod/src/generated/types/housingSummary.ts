@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * TAPO – Tagging dan Analisis Perubahan Objek Perumahan API
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 import type { CategoryCount } from './categoryCount';
 
@@ -15,4 +15,7 @@ export interface HousingSummary {
   byJenisPerubahan: CategoryCount[];
   byKondisi: CategoryCount[];
   byRt: CategoryCount[];
+  byKlaster: CategoryCount[];
+  byJenisLantai: CategoryCount[];
+  byJenisDinding: CategoryCount[];
 }

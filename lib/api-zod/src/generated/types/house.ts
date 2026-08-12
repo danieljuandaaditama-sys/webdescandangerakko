@@ -3,8 +3,9 @@
  * Do not edit manually.
  * Api
  * TAPO – Tagging dan Analisis Perubahan Objek Perumahan API
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
+import type { HouseKlaster } from './houseKlaster';
 import type { HouseStatusPerubahan } from './houseStatusPerubahan';
 
 export interface House {
@@ -17,15 +18,53 @@ export interface House {
   lat: number;
   lng: number;
   statusPerubahan: HouseStatusPerubahan;
+  /** Baik, Rusak Ringan, Rusak Berat */
+  kondisiBangunan: string;
+  /** K1=Tidak/Sedikit Berubah, K2=Perubahan Sedang, K3=Perubahan Signifikan */
+  klaster: HouseKlaster;
+  /** Total number of change types experienced */
+  jumlahJenisPerubahan: number;
   /**
-     * Type of change: Renovasi, Pembongkaran, Pembangunan Baru, Alih Fungsi
+     * Luas bangunan dalam m2
      * @nullable
      */
-  jenisPerubahan?: string | null;
-  /** Building condition: Baik, Rusak Ringan, Rusak Berat */
-  kondisiBangunan: string;
+  luasBangunan?: number | null;
+  /**
+     * Luas lahan dalam m2
+     * @nullable
+     */
+  luasLahan?: number | null;
+  /**
+     * Semen, Keramik, Marmer/Granit, Kayu
+     * @nullable
+     */
+  jeniLantai?: string | null;
+  /**
+     * Tembok, Kayu, Bambu, Seng
+     * @nullable
+     */
+  jenisDinding?: string | null;
+  /** @nullable */
+  jumlahLantai?: number | null;
+  /**
+     * Genteng, Seng, Asbes
+     * @nullable
+     */
+  jenisAtap?: string | null;
+  /**
+     * Ada (Tembok), Ada (Kayu), Tidak Ada
+     * @nullable
+     */
+  pagar?: string | null;
   /** @nullable */
   tahunDatang?: number | null;
   /** @nullable */
   keterangan?: string | null;
+  perubahanPagar: boolean;
+  perubahanLuasBangunan: boolean;
+  perubahanJumlahLantai: boolean;
+  perubahanJenisLantai: boolean;
+  perubahanJenisDinding: boolean;
+  perubahanLuasLahan: boolean;
+  perubahanJenisAtap: boolean;
 }

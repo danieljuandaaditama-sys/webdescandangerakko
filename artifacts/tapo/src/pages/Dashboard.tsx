@@ -1,386 +1,534 @@
-import React, { useState, useMemo } from "react"
+import { useState, useMemo } from "react";
 import { 
-  Building2, 
-  RefreshCw, 
-  CheckCircle2, 
-  TrendingUp, 
-  Map as MapIcon, 
-  AlertCircle,
-  Loader2,
-  FileSpreadsheet
-} from "lucide-react"
+  useGetHousingSummary, 
+  useGetHousingChartData, 
+  useGetHousingInsight, 
+  useListHouses, 
+  useListChangedHouses 
+} from "@workspace/api-client-react";
+import { Link } from "wouter";
+import { 
+  Home, Activity, AlertCircle, ArrowRight, CheckCircle2, ChevronRight, 
+  BarChart3, Settings2, Info, Map 
+} from "lucide-react";
 
-import {
-  useListHouses,
-  useGetHousingSummary,
-  useGetHousingChartData,
-  useGetHousingInsight,
-  useListChangedHouses,
-  ListHousesStatusPerubahan
-} from "@workspace/api-client-react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Skeleton } from "@/components/ui/skeleton"
-import { NativeSelect } from "@/components/ui/native-select"
-import { Button } from "@/components/ui/button"
+import { LeafletMapEngine } from "@/components/map/LeafletMapEngine";
 
-import { MapView } from "@/components/map-view"
-import { DashboardCharts } from "@/components/charts"
+const COLOR_PALETTE = [
+  "#2563EB", "#7C3AED", "#DB2777", "#EA580C", "#059669", "#EAB308", "#06B6D4"
+];
+
+function KLASTER_COLOR(klaster: string) {
+  if (klaster === "K1") return "#22C55E";
+  if (klaster === "K2") return "#F59E0B";
+  if (klaster === "K3") return "#EF4444";
+  return "#9CA3AF";
+}
+
+function STATUS_COLOR(status: string) {
+  if (status === "berubah") return "#EF4444";
+  return "#22C55E";
+}
+
+function LANTAI_COLOR(lantai: string | null | undefined) {
+  if (lantai === "Keramik") return "#3B82F6";
+  if (lantai === "Marmer/Granit") return "#8B5CF6";
+  if (lantai === "Semen") return "#F59E0B";
+  if (lantai === "Kayu") return "#78716C";
+  return "#9CA3AF";
+}
 
 export default function Dashboard() {
-  const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [jenisFilter, setJenisFilter] = useState<string>("all")
-  const [kondisiFilter, setKondisiFilter] = useState<string>("all")
-  const [rtFilter, setRtFilter] = useState<string>("all")
+  const { data: summary, isLoading: isLoadingSummary } = useGetHousingSummary({
+    query: { queryKey: ["dashboard", "summary"] }
+  });
+  
+  const { data: chartData, isLoading: isLoadingChart } = useGetHousingChartData({
+    query: { queryKey: ["dashboard", "chart"] }
+  });
+  
+  const { data: insight, isLoading: isLoadingInsight } = useGetHousingInsight(undefined, {
+    query: { queryKey: ["dashboard", "insight"] }
+  });
+  
+  const { data: allHouses, isLoading: isLoadingAll } = useListHouses(undefined, {
+    query: { queryKey: ["dashboard", "allHouses"] }
+  });
+  
+  const { data: changedHouses, isLoading: isLoadingChanged } = useListChangedHouses({
+    query: { queryKey: ["dashboard", "changedHouses"] }
+  });
 
-  // Map local state to API parameters
-  const apiParams = useMemo(() => {
-    const params: any = {}
-    if (statusFilter !== "all") params.statusPerubahan = statusFilter as ListHousesStatusPerubahan
-    if (jenisFilter !== "all") params.jenisPerubahan = jenisFilter
-    if (kondisiFilter !== "all") params.kondisiBangunan = kondisiFilter
-    if (rtFilter !== "all") params.rt = rtFilter
-    return params
-  }, [statusFilter, jenisFilter, kondisiFilter, rtFilter])
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPageAll, setCurrentPageAll] = useState(1);
+  const [currentPageChanged, setCurrentPageChanged] = useState(1);
+  const itemsPerPage = 10;
 
-  // Insight API takes subset of params
-  const insightParams = useMemo(() => {
-    const params: any = {}
-    if (statusFilter !== "all") params.statusPerubahan = statusFilter
-    if (jenisFilter !== "all") params.jenisPerubahan = jenisFilter
-    if (rtFilter !== "all") params.rt = rtFilter
-    return params
-  }, [statusFilter, jenisFilter, rtFilter])
+  // Helpers for filtering and pagination
+  const filterHouses = (houses: any[] = []) => {
+    if (!searchQuery) return houses;
+    const lower = searchQuery.toLowerCase();
+    return houses.filter((h) => 
+      h.namaKepalaKeluarga?.toLowerCase().includes(lower) || 
+      h.alamat?.toLowerCase().includes(lower)
+    );
+  };
 
-  // Queries
-  const { data: houses, isLoading: loadingHouses, error: errorHouses } = useListHouses(apiParams, { query: { enabled: true } })
-  const { data: summary, isLoading: loadingSummary } = useGetHousingSummary({ query: { enabled: true } })
-  const { data: chartData, isLoading: loadingChartData } = useGetHousingChartData({ query: { enabled: true } })
-  const { data: insight, isLoading: loadingInsight } = useGetHousingInsight(insightParams, { query: { enabled: true } })
-  const { data: changedHouses, isLoading: loadingChangedHouses } = useListChangedHouses({ query: { enabled: true } })
+  const paginatedAll = useMemo(() => {
+    const filtered = filterHouses(allHouses);
+    return filtered.slice((currentPageAll - 1) * itemsPerPage, currentPageAll * itemsPerPage);
+  }, [allHouses, searchQuery, currentPageAll]);
 
-  const resetFilters = () => {
-    setStatusFilter("all")
-    setJenisFilter("all")
-    setKondisiFilter("all")
-    setRtFilter("all")
+  const paginatedChanged = useMemo(() => {
+    const filtered = filterHouses(changedHouses);
+    return filtered.slice((currentPageChanged - 1) * itemsPerPage, currentPageChanged * itemsPerPage);
+  }, [changedHouses, searchQuery, currentPageChanged]);
+
+  const totalAllPages = allHouses ? Math.ceil(filterHouses(allHouses).length / itemsPerPage) : 1;
+  const totalChangedPages = changedHouses ? Math.ceil(filterHouses(changedHouses).length / itemsPerPage) : 1;
+
+  if (isLoadingSummary || isLoadingChart || isLoadingInsight || isLoadingAll || isLoadingChanged) {
+    return <DashboardSkeleton />;
   }
 
-  // Calculate dynamic stats from filtered data (since summary endpoint might be global, though often summary endpoints take params too. The generated hook for summary doesn't take params! So we calculate from 'houses' for accurate filtered stats if needed, or rely on global summary for top cards. The prompt says "StatCards row... Filters must drive all API calls reactively." Wait, `useGetHousingSummary` doesn't accept params according to schema. I will show global summary in top cards or calculate from local filtered list. Let's calculate from local list if filters are active, or just display global summary. Actually, let's use the `houses` array to calculate filtered stats so they reflect the map).
-  // Wait, if I calculate from `houses`, it's perfectly reactive.
-  const filteredStats = useMemo(() => {
-    if (!houses) return { total: 0, berubah: 0, tidakBerubah: 0, persen: 0 }
-    const total = houses.length
-    const berubah = houses.filter(h => h.statusPerubahan === "berubah").length
-    const tidakBerubah = houses.filter(h => h.statusPerubahan === "tidak_berubah").length
-    const persen = total > 0 ? ((berubah / total) * 100).toFixed(1) : "0.0"
-    return { total, berubah, tidakBerubah, persen }
-  }, [houses])
+  const validJenisPerubahan = summary?.byJenisPerubahan.filter(j => j.jumlah > 0) || [];
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-card px-6 shadow-sm">
-        <div className="flex items-center gap-2 text-primary font-bold text-lg tracking-tight">
-          <MapIcon className="h-5 w-5" />
-          <span>TAPO <span className="font-medium text-muted-foreground">| Kelurahan Boting</span></span>
-        </div>
-        <div className="ml-auto text-xs text-muted-foreground font-mono">
-          SYSTEM_STATUS: ONLINE
-        </div>
-      </header>
+    <div className="container mx-auto px-4 py-8 space-y-8 animate-in fade-in zoom-in-95 duration-500">
+      
+      {/* SECTION A: Page Header */}
+      <div className="flex flex-col gap-1">
+        <h1 className="text-3xl font-bold tracking-tight">TAPO</h1>
+        <p className="text-muted-foreground text-sm font-medium uppercase tracking-widest">
+          Kelurahan Boting · Dashboard Perubahan Rumah
+        </p>
+      </div>
 
-      <main className="flex-1 p-6 flex flex-col gap-6">
-        
-        {/* Filter Bar */}
-        <div className="bg-card border rounded-lg p-4 flex flex-col sm:flex-row items-center gap-4">
-          <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Status Perubahan</label>
-              <NativeSelect value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-                <option value="all">Semua Status</option>
-                <option value="berubah">Berubah</option>
-                <option value="tidak_berubah">Tidak Berubah</option>
-              </NativeSelect>
+      {/* SECTION B: Summary Cards */}
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card className="bg-primary/5 border-primary/20 shadow-sm relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-10">
+              <Home className="w-24 h-24 text-primary" />
             </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Jenis Perubahan</label>
-              <NativeSelect value={jenisFilter} onChange={e => setJenisFilter(e.target.value)}>
-                <option value="all">Semua Jenis</option>
-                <option value="Renovasi">Renovasi</option>
-                <option value="Pembongkaran">Pembongkaran</option>
-                <option value="Pembangunan Baru">Pembangunan Baru</option>
-                <option value="Alih Fungsi">Alih Fungsi</option>
-              </NativeSelect>
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Kondisi Bangunan</label>
-              <NativeSelect value={kondisiFilter} onChange={e => setKondisiFilter(e.target.value)}>
-                <option value="all">Semua Kondisi</option>
-                <option value="Baik">Baik</option>
-                <option value="Rusak Ringan">Rusak Ringan</option>
-                <option value="Rusak Berat">Rusak Berat</option>
-              </NativeSelect>
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Wilayah RT</label>
-              <NativeSelect value={rtFilter} onChange={e => setRtFilter(e.target.value)}>
-                <option value="all">Semua RT</option>
-                <option value="RT 01">RT 01</option>
-                <option value="RT 02">RT 02</option>
-                <option value="RT 03">RT 03</option>
-                <option value="RT 04">RT 04</option>
-                <option value="RT 05">RT 05</option>
-              </NativeSelect>
-            </div>
-          </div>
-          <div className="flex items-end h-full mt-1 sm:mt-5">
-            <Button variant="outline" onClick={resetFilters} className="w-full sm:w-auto text-xs uppercase font-bold tracking-wider">
-              Reset
-            </Button>
-          </div>
-        </div>
-
-        {/* Stat Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total Terdata</CardTitle>
-              <Building2 className="h-4 w-4 text-muted-foreground" />
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold text-primary uppercase">Total Rumah Terdata</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-mono font-bold">{loadingHouses ? <Skeleton className="h-9 w-20" /> : filteredStats.total}</div>
-              <p className="text-xs text-muted-foreground mt-1">Objek perumahan</p>
+              <div className="text-5xl font-bold text-primary font-mono tracking-tighter">
+                {summary?.totalRumah.toLocaleString('id-ID')}
+              </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Rumah Berubah</CardTitle>
-              <RefreshCw className="h-4 w-4 text-destructive" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-mono font-bold text-destructive">{loadingHouses ? <Skeleton className="h-9 w-20" /> : filteredStats.berubah}</div>
-              <p className="text-xs text-muted-foreground mt-1">Mengalami perubahan</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Tidak Berubah</CardTitle>
-              <CheckCircle2 className="h-4 w-4 text-success" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-mono font-bold text-success">{loadingHouses ? <Skeleton className="h-9 w-20" /> : filteredStats.tidakBerubah}</div>
-              <p className="text-xs text-muted-foreground mt-1">Tetap sesuai data awal</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Tingkat Perubahan</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-mono font-bold">{loadingHouses ? <Skeleton className="h-9 w-20" /> : `${filteredStats.persen}%`}</div>
-              <p className="text-xs text-muted-foreground mt-1">Dari total area filter</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Main Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[600px]">
           
-          {/* Left Col: Insights */}
-          <div className="lg:col-span-3 flex flex-col gap-6 h-full">
-            <Card className="flex-1 flex flex-col overflow-hidden bg-slate-900 text-slate-50 border-slate-800">
-              <CardHeader className="bg-slate-950 pb-4 border-b border-slate-800">
-                <CardTitle className="text-sm text-slate-200 flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4 text-blue-400" /> 
-                  Analisis Sistem
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0 flex-1 overflow-auto">
-                <div className="p-6">
-                  {loadingInsight ? (
-                    <div className="space-y-4">
-                      <Skeleton className="h-4 w-full bg-slate-800" />
-                      <Skeleton className="h-4 w-5/6 bg-slate-800" />
-                      <Skeleton className="h-4 w-4/6 bg-slate-800" />
-                    </div>
-                  ) : insight ? (
-                    <div className="space-y-6">
-                      <p className="text-sm leading-relaxed text-slate-300">{insight.ringkasan}</p>
-                      <ul className="space-y-3">
-                        {insight.poin.map((p, i) => (
-                          <li key={i} className="flex gap-3 text-sm">
-                            <span className="text-blue-400 shrink-0">→</span>
-                            <span className="text-slate-400 leading-snug">{p}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : (
-                    <div className="text-sm text-slate-500 italic">Insight belum tersedia untuk filter ini.</div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Center Col: Map */}
-          <div className="lg:col-span-6 h-full relative border rounded-lg bg-slate-100 flex items-center justify-center overflow-hidden shadow-inner">
-            {loadingHouses ? (
-              <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                <Loader2 className="h-8 w-8 animate-spin" />
-                <span className="text-sm font-medium tracking-widest uppercase">Memuat Peta Spatial...</span>
+          <Card className="bg-destructive/5 border-destructive/20 shadow-sm relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-10">
+              <Activity className="w-24 h-24 text-destructive" />
+            </div>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold text-destructive uppercase">Rumah Mengalami Perubahan</CardTitle>
+            </CardHeader>
+            <CardContent className="flex items-end gap-4">
+              <div className="text-5xl font-bold text-destructive font-mono tracking-tighter">
+                {summary?.rumahBerubah.toLocaleString('id-ID')}
               </div>
-            ) : errorHouses ? (
-              <div className="text-destructive text-sm flex items-center gap-2">
-                <AlertCircle className="h-4 w-4" /> Gagal memuat data spasial
+              <div className="mb-1.5 flex items-center gap-1.5 text-destructive/80 font-medium">
+                <Badge variant="destructive" className="font-mono text-xs">
+                  {summary?.persenPerubahan.toFixed(1)}%
+                </Badge>
+                dari total
               </div>
-            ) : houses && houses.length > 0 ? (
-              <MapView houses={houses} />
-            ) : (
-              <div className="text-sm text-muted-foreground">Tidak ada koordinat terdata</div>
-            )}
-          </div>
-
-          {/* Right Col: Analytics & Global Data */}
-          <div className="lg:col-span-3 flex flex-col gap-6 h-full overflow-hidden">
-            <Card className="flex-1 flex flex-col overflow-hidden">
-              <CardHeader className="pb-2 bg-slate-50 border-b">
-                <CardTitle className="text-sm">Analisis & Data Global</CardTitle>
-                <CardDescription className="text-xs">Keseluruhan Kelurahan Boting</CardDescription>
-              </CardHeader>
-              <CardContent className="flex-1 p-0 overflow-y-auto">
-                <div className="p-4 space-y-6">
-                  {/* Global Summary */}
-                  <div>
-                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Ringkasan Global</h4>
-                    {loadingSummary ? (
-                      <Skeleton className="h-16 w-full" />
-                    ) : summary ? (
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div className="bg-slate-100 p-2 rounded">
-                          <div className="text-muted-foreground text-xs">Total</div>
-                          <div className="font-mono font-medium">{summary.totalRumah}</div>
-                        </div>
-                        <div className="bg-destructive/10 text-destructive p-2 rounded">
-                          <div className="text-destructive/70 text-xs">Berubah</div>
-                          <div className="font-mono font-medium">{summary.rumahBerubah}</div>
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-
-                  {/* Charts */}
-                  <div className="h-[400px]">
-                    {loadingChartData ? (
-                      <div className="h-full flex items-center justify-center">
-                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                      </div>
-                    ) : chartData ? (
-                      <DashboardCharts jenisData={chartData.jenisPerubahan} kondisiData={chartData.kondisiBangunan} />
-                    ) : null}
-                  </div>
-
-                  {/* Recent Changes Log */}
-                  <div>
-                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Log Perubahan Terbaru</h4>
-                    {loadingChangedHouses ? (
-                      <div className="space-y-2">
-                        <Skeleton className="h-12 w-full" />
-                        <Skeleton className="h-12 w-full" />
-                      </div>
-                    ) : changedHouses && changedHouses.length > 0 ? (
-                      <div className="space-y-2">
-                        {changedHouses.slice(0, 5).map(house => (
-                          <div key={house.id} className="text-xs border rounded p-2 bg-white flex flex-col gap-1">
-                            <div className="flex justify-between items-start">
-                              <span className="font-medium">{house.namaKepalaKeluarga}</span>
-                              <span className="font-mono text-[10px] text-muted-foreground">{house.rt}</span>
-                            </div>
-                            <div className="text-muted-foreground">{house.jenisPerubahan}</div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-xs text-muted-foreground">Tidak ada riwayat perubahan.</div>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Data Table */}
-        <Card className="mt-4">
-          <CardHeader className="flex flex-row items-center gap-2 pb-2">
-            <FileSpreadsheet className="h-5 w-5 text-muted-foreground" />
-            <div>
-              <CardTitle className="text-sm">Direktori Objek</CardTitle>
-              <CardDescription className="text-xs">Daftar objek perumahan berdasarkan filter aktif</CardDescription>
-            </div>
+        {validJenisPerubahan.length > 0 && (
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+            {validJenisPerubahan.map((jenis, idx) => (
+              <Card key={idx} className="shadow-sm border-border">
+                <CardHeader className="p-3 pb-0">
+                  <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase leading-tight line-clamp-2 h-7">
+                    {jenis.label}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-3 pt-1">
+                  <div className="text-xl font-bold font-mono text-foreground">
+                    {jenis.jumlah.toLocaleString('id-ID')}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* SECTION C: Distribusi Perubahan Rumah */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="col-span-1 lg:col-span-1 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-primary" />
+              Proporsi Jenis Perubahan
+            </CardTitle>
           </CardHeader>
-          <CardContent className="p-0">
-            <div className="max-h-[400px] overflow-auto">
-              <Table>
-                <TableHeader className="bg-slate-50 sticky top-0 z-10 shadow-sm">
-                  <TableRow>
-                    <TableHead className="w-16 font-mono text-xs">NO</TableHead>
-                    <TableHead className="text-xs uppercase tracking-wider">Nama KK</TableHead>
-                    <TableHead className="text-xs uppercase tracking-wider">Alamat</TableHead>
-                    <TableHead className="w-24 text-xs uppercase tracking-wider">RT/RW</TableHead>
-                    <TableHead className="w-32 text-xs uppercase tracking-wider">Status</TableHead>
-                    <TableHead className="text-xs uppercase tracking-wider">Jenis Perubahan</TableHead>
-                    <TableHead className="text-xs uppercase tracking-wider">Kondisi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loadingHouses ? (
-                    Array.from({ length: 5 }).map((_, i) => (
-                      <TableRow key={i}>
-                        <TableCell><Skeleton className="h-4 w-8" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-48" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-12" /></TableCell>
-                        <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                      </TableRow>
-                    ))
-                  ) : houses && houses.length > 0 ? (
-                    houses.map((house, idx) => (
-                      <TableRow key={house.id}>
-                        <TableCell className="font-mono text-muted-foreground text-xs">{house.nomorUrut || idx + 1}</TableCell>
-                        <TableCell className="font-medium text-sm">{house.namaKepalaKeluarga}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{house.alamat}</TableCell>
-                        <TableCell className="text-xs font-mono">{house.rt}/{house.rw}</TableCell>
-                        <TableCell>
-                          <Badge variant={house.statusPerubahan === "berubah" ? "destructive" : "success"}>
-                            {house.statusPerubahan === "berubah" ? "Berubah" : "Tetap"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-sm">{house.jenisPerubahan || "-"}</TableCell>
-                        <TableCell className="text-sm">{house.kondisiBangunan}</TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={7} className="h-24 text-center text-muted-foreground text-sm">
-                        Tidak ada data yang sesuai dengan filter.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+          <CardContent className="flex flex-col items-center justify-center">
+            <div className="h-[250px] w-full relative">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={chartData?.jenisPerubahan}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={90}
+                    paddingAngle={2}
+                    dataKey="jumlah"
+                    nameKey="label"
+                    stroke="none"
+                  >
+                    {chartData?.jenisPerubahan.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLOR_PALETTE[index % COLOR_PALETTE.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value: number) => [`${value} Rumah`, "Jumlah"]}
+                    contentStyle={{ borderRadius: "8px", border: "1px solid var(--color-border)", fontSize: "12px" }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-2xl font-bold font-mono text-foreground leading-none">{summary?.rumahBerubah}</span>
+                <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold mt-1">Total</span>
+              </div>
+            </div>
+            <div className="w-full grid grid-cols-2 gap-x-2 gap-y-2 mt-4 px-2">
+              {chartData?.jenisPerubahan.map((entry, index) => (
+                <div key={index} className="flex items-center gap-2 text-xs">
+                  <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLOR_PALETTE[index % COLOR_PALETTE.length] }} />
+                  <span className="truncate flex-1 text-muted-foreground" title={entry.label}>{entry.label}</span>
+                  <span className="font-mono font-medium">{entry.jumlah}</span>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
 
-      </main>
+        <Card className="col-span-1 lg:col-span-2 bg-foreground text-background border-none shadow-md overflow-hidden relative">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
+          <CardHeader>
+            <CardTitle className="text-base font-semibold flex items-center gap-2 text-primary-foreground">
+              <Settings2 className="w-4 h-4 text-primary-foreground/80" />
+              Smart Insight
+            </CardTitle>
+            <CardDescription className="text-primary-foreground/60">
+              Analisis otomatis berdasarkan data terkini
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="relative z-10 space-y-6">
+            <p className="text-lg font-medium leading-relaxed">
+              {insight?.ringkasan}
+            </p>
+            <div className="space-y-3">
+              {insight?.poin.map((p, idx) => (
+                <div key={idx} className="flex items-start gap-3">
+                  <ArrowRight className="w-4 h-4 text-primary shrink-0 mt-1" />
+                  <span className="text-sm text-primary-foreground/90 leading-relaxed">{p}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* SECTION E: Analisis Spasial */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold tracking-tight">Analisis Spasial</h2>
+          <Link href="/smart-map" className="text-sm font-semibold text-primary flex items-center gap-1 hover:underline">
+            Buka Smart Map <ChevronRight className="w-4 h-4" />
+          </Link>
+        </div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className="shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold">Peta Klasterisasi Spasial</CardTitle>
+              <CardDescription className="text-xs">Pengelompokan rumah berdasarkan tingkat perubahan</CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              <LeafletMapEngine
+                data={allHouses || []}
+                height="300px"
+                colorByField="klaster"
+                colorMap={KLASTER_COLOR}
+                legend={[
+                  { label: "K1 - Tidak/Sedikit Berubah", color: "#22C55E" },
+                  { label: "K2 - Perubahan Sedang", color: "#F59E0B" },
+                  { label: "K3 - Perubahan Signifikan", color: "#EF4444" },
+                ]}
+                popupContent={(h) => (
+                  <div className="space-y-1.5">
+                    <div className="font-bold text-sm">{h.id}</div>
+                    <div className="text-xs">{h.namaKepalaKeluarga}</div>
+                    <Badge className="text-[10px]" style={{ backgroundColor: KLASTER_COLOR(h.klaster) }}>
+                      {h.klaster}
+                    </Badge>
+                  </div>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-sm border-primary/20">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold flex items-center gap-1">
+                <Map className="w-4 h-4 text-primary" /> Smart Map
+              </CardTitle>
+              <CardDescription className="text-xs">Persebaran rumah berubah vs tidak berubah</CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              <LeafletMapEngine
+                data={allHouses || []}
+                height="300px"
+                colorByField="statusPerubahan"
+                colorMap={STATUS_COLOR}
+                legend={[
+                  { label: "Berubah", color: "#EF4444" },
+                  { label: "Tidak Berubah", color: "#22C55E" },
+                ]}
+                popupContent={(h) => (
+                  <div className="space-y-1.5">
+                    <div className="font-bold text-sm">{h.id}</div>
+                    <div className="text-xs">{h.namaKepalaKeluarga}</div>
+                    <Badge variant={h.statusPerubahan === "berubah" ? "destructive" : "success"} className="text-[10px]">
+                      {h.statusPerubahan.replace("_", " ").toUpperCase()}
+                    </Badge>
+                  </div>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold">Peta Tagging Location</CardTitle>
+              <CardDescription className="text-xs">Distribusi berdasarkan jenis lantai</CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              <LeafletMapEngine
+                data={allHouses || []}
+                height="300px"
+                colorByField="jeniLantai"
+                colorMap={LANTAI_COLOR}
+                legend={[
+                  { label: "Keramik", color: "#3B82F6" },
+                  { label: "Marmer/Granit", color: "#8B5CF6" },
+                  { label: "Semen", color: "#F59E0B" },
+                  { label: "Kayu", color: "#78716C" },
+                  { label: "Tidak Diketahui", color: "#9CA3AF" },
+                ]}
+                popupContent={(h) => (
+                  <div className="space-y-1.5">
+                    <div className="font-bold text-sm">{h.id}</div>
+                    <div className="text-xs">{h.namaKepalaKeluarga}</div>
+                    <div className="text-xs font-medium bg-muted px-1.5 py-0.5 rounded inline-block">
+                      Lantai: {h.jeniLantai || "—"}
+                    </div>
+                  </div>
+                )}
+              />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* SECTION D: Tabel Data Terstruktur */}
+      <div className="space-y-4 pt-6 border-t">
+        <h2 className="text-lg font-bold tracking-tight">Data Terstruktur</h2>
+        <Tabs defaultValue="all" className="w-full">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+            <TabsList className="grid w-full sm:w-[400px] grid-cols-2">
+              <TabsTrigger value="all">Seluruh Rumah</TabsTrigger>
+              <TabsTrigger value="changed">Mengalami Perubahan</TabsTrigger>
+            </TabsList>
+            <div className="relative w-full sm:w-64">
+              <Input 
+                placeholder="Cari Nama KK atau Alamat..." 
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPageAll(1);
+                  setCurrentPageChanged(1);
+                }}
+                className="pl-8"
+              />
+              <Info className="w-4 h-4 absolute left-2.5 top-2.5 text-muted-foreground" />
+            </div>
+          </div>
+
+          <TabsContent value="all" className="m-0 border rounded-md shadow-sm bg-card overflow-hidden">
+            <HouseTable 
+              data={paginatedAll} 
+              page={currentPageAll}
+              totalPages={totalAllPages}
+              onPageChange={setCurrentPageAll}
+            />
+          </TabsContent>
+          
+          <TabsContent value="changed" className="m-0 border rounded-md shadow-sm bg-card overflow-hidden">
+            <HouseTable 
+              data={paginatedChanged} 
+              page={currentPageChanged}
+              totalPages={totalChangedPages}
+              onPageChange={setCurrentPageChanged}
+            />
+          </TabsContent>
+        </Tabs>
+      </div>
+
     </div>
-  )
+  );
+}
+
+function HouseTable({ 
+  data, 
+  page, 
+  totalPages, 
+  onPageChange 
+}: { 
+  data: any[]; 
+  page: number; 
+  totalPages: number; 
+  onPageChange: (p: number) => void; 
+}) {
+  const getJenisPerubahanList = (h: any) => {
+    const list = [];
+    if (h.perubahanPagar) list.push("Pagar");
+    if (h.perubahanLuasBangunan) list.push("Luas Bangunan");
+    if (h.perubahanJumlahLantai) list.push("Jumlah Lantai");
+    if (h.perubahanJenisLantai) list.push("Jenis Lantai");
+    if (h.perubahanJenisDinding) list.push("Jenis Dinding");
+    if (h.perubahanLuasLahan) list.push("Luas Lahan");
+    if (h.perubahanJenisAtap) list.push("Jenis Atap");
+    return list.length > 0 ? list.join(", ") : "—";
+  };
+
+  return (
+    <div className="flex flex-col w-full">
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader className="bg-muted/50">
+            <TableRow>
+              <TableHead className="w-12 text-center">No.</TableHead>
+              <TableHead>Nama KK</TableHead>
+              <TableHead>Alamat</TableHead>
+              <TableHead className="w-16">RT</TableHead>
+              <TableHead className="w-16">RW</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Jenis Perubahan</TableHead>
+              <TableHead>Kondisi</TableHead>
+              <TableHead>Klaster</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {data.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                  Tidak ada data yang ditemukan.
+                </TableCell>
+              </TableRow>
+            ) : (
+              data.map((h, i) => (
+                <TableRow key={h.id}>
+                  <TableCell className="text-center font-mono text-muted-foreground text-xs">
+                    {(page - 1) * 10 + i + 1}
+                  </TableCell>
+                  <TableCell className="font-medium">{h.namaKepalaKeluarga}</TableCell>
+                  <TableCell className="max-w-[200px] truncate text-muted-foreground" title={h.alamat}>
+                    {h.alamat}
+                  </TableCell>
+                  <TableCell className="font-mono text-xs">{h.rt}</TableCell>
+                  <TableCell className="font-mono text-xs">{h.rw}</TableCell>
+                  <TableCell>
+                    <Badge variant={h.statusPerubahan === "berubah" ? "destructive" : "success"} className="text-[10px]">
+                      {h.statusPerubahan.replace("_", " ").toUpperCase()}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="max-w-[150px] truncate text-xs" title={getJenisPerubahanList(h)}>
+                    {getJenisPerubahanList(h)}
+                  </TableCell>
+                  <TableCell className="text-xs">{h.kondisiBangunan}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="font-mono text-[10px]" style={{ color: KLASTER_COLOR(h.klaster), borderColor: KLASTER_COLOR(h.klaster) }}>
+                      {h.klaster}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+      
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/20">
+          <div className="text-xs text-muted-foreground font-medium">
+            Halaman {page} dari {totalPages}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange(Math.max(1, page - 1))}
+              disabled={page === 1}
+            >
+              Sebelumnya
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+              disabled={page === totalPages}
+            >
+              Selanjutnya
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="container mx-auto px-4 py-8 space-y-8">
+      <div className="space-y-2">
+        <Skeleton className="h-10 w-48" />
+        <Skeleton className="h-4 w-72" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-32 w-full" />
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+        {Array(7).fill(0).map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Skeleton className="h-[350px] w-full" />
+        <Skeleton className="h-[350px] w-full col-span-1 lg:col-span-2" />
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-[350px] w-full" />)}
+      </div>
+    </div>
+  );
 }

@@ -6,9 +6,10 @@
  * OpenAPI spec version: 0.2.0
  */
 
-export interface RtBreakdown {
-  rt: string;
-  berubah: number;
-  tidakBerubah: number;
-  total: number;
+export interface VariabelMetadata {
+  nama: string;
+  deskripsi: string;
+  tipe: string;
+  /** @nullable */
+  nilaiValid?: string | null;
 }

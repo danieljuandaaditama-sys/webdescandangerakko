@@ -1,0 +1,114 @@
+Saya ingin melakukan redesign dan pengembangan lanjutan pada project TAPO yang SUDAH ADA.
+
+JANGAN membuat project baru.
+JANGAN menghapus project yang sudah ada.
+JANGAN mengganti framework yang sudah digunakan tanpa alasan.
+JANGAN menghilangkan data, fungsi, API, atau fitur yang saat ini sudah berjalan.
+
+Nama aplikasi:
+TAPO — Tagging dan Analisis Perubahan Objek Perumahan
+
+Konteks:
+TAPO adalah dashboard pemetaan dan analisis data Pendataan Lengkap Perumahan pada program Kelurahan Cinta Statistik.
+
+Saat ini prototype sudah berjalan, tetapi tampilan dan struktur analisis spasialnya belum sesuai dengan rancangan yang saya inginkan.
+
+Saya ingin mengembangkan project yang sudah ada menjadi dashboard analisis spasial yang lebih interaktif.
+
+==================================================
+TUJUAN UTAMA
+==================================================
+
+TAPO bukan hanya dashboard statistik.
+
+TAPO harus mengubah data tabular hasil pendataan perumahan menjadi:
+
+1. informasi statistik,
+2. visualisasi,
+3. informasi spasial,
+4. analisis perubahan,
+5. smart insight,
+6. dan nantinya rekomendasi yang dapat membantu pengambilan keputusan.
+
+Prototype pertama berfokus pada:
+KELURAHAN BOTING.
+
+Nantinya aplikasi yang sama akan digunakan untuk dua kelurahan lainnya dengan struktur dan kode yang sama, tetapi dataset, nama wilayah, dan konfigurasi wilayah berbeda.
+
+Oleh karena itu kode harus dibuat modular dan mudah diduplikasi untuk kelurahan lain.
+
+==================================================
+KONSEP UTAMA UI
+==================================================
+
+Saya TIDAK ingin semua peta langsung ditampilkan sekaligus.
+
+Peta harus bersifat INTERAKTIF dan muncul berdasarkan pilihan user.
+
+Konsepnya:
+
+Dashboard
+    ↓
+Ringkasan Data
+    ↓
+Smart Insight
+    ↓
+Distribusi Perubahan
+    ↓
+Tabel Data
+    ↓
+SECTION 3 — ANALISIS SPASIAL
+    ↓
+User memilih jenis analisis
+    ↓
+Visualisasi/peta yang dipilih baru muncul
+
+Pada Section 3 terdapat tiga pilihan utama:
+
+1. PETA KLASTERISASI
+2. SMART MAP
+3. TAGGING LOCATION
+
+Ketika user belum memilih:
+tampilkan empty state yang menjelaskan:
+
+"Silakan pilih jenis analisis spasial untuk melihat visualisasi."
+
+Ketika user memilih salah satu:
+hanya visualisasi yang dipilih yang ditampilkan.
+
+JANGAN menampilkan tiga peta sekaligus.
+
+==================================================
+STRUKTUR DASHBOARD
+==================================================
+
+Buat dashboard dengan struktur berikut:
+
+SECTION 1
+DASHBOARD RINGKASAN
+
+Menampilkan:
+
+- Total rumah/data
+- Rumah mengalami perubahan
+- Rumah tidak mengalami perubahan
+- Persentase perubahan
+- Perubahan pagar
+- Perubahan jumlah lantai
+- Perubahan luas bangunan
+- Perubahan luas lahan
+- Perubahan jenis lantai
+- Perubahan jenis dinding
+- Perubahan jenis atap
+
+Angka harus berasal dari dataset yang sebenarnya.
+Jangan hardcode angka jika data sudah tersedia di project.
+
+Gunakan summary cards yang bersih dan modern.
+
+==================================================
+SMART INSIGHT
+==================================================
+
+Di bawah summary cards tampilkan

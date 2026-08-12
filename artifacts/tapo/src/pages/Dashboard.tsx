@@ -8,25 +8,29 @@ import {
 } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import {
-  Home, Activity, CheckCircle2, ArrowRight, ChevronRight,
-  BarChart3, Settings2, Info, Map, Layers, MapPin, Tag,
-  AlertCircle,
+  Home, Activity, CheckCircle2, ChevronLeft, ChevronRight,
+  BarChart3, Info, Map, AlertCircle, ExternalLink,
 } from "lucide-react";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import {
+  BarChart, Bar, Cell, XAxis, YAxis, Tooltip,
+  ResponsiveContainer, LabelList,
+} from "recharts";
 
 import { LeafletMapEngine } from "@/components/map/LeafletMapEngine";
 
 // ─── Color helpers ──────────────────────────────────────────────────────────
 
-const CHART_PALETTE = [
+const CHART_COLORS = [
   "#2563EB", "#7C3AED", "#DB2777", "#EA580C", "#059669", "#EAB308", "#06B6D4",
 ];
 
@@ -36,663 +40,623 @@ function klasterColor(klaster: string) {
   if (klaster === "K3") return "#EF4444";
   return "#9CA3AF";
 }
-
-function statusColor(status: string) {
-  return status === "berubah" ? "#EF4444" : "#22C55E";
+function statusColor(s: string) { return s === "berubah" ? "#EF4444" : "#22C55E"; }
+function lantaiColor(l: string | null | undefined) {
+  if (l === "Keramik") return "#3B82F6";
+  if (l === "Marmer/Granit") return "#8B5CF6";
+  if (l === "Semen") return "#F59E0B";
+  if (l === "Kayu") return "#78716C";
+  return "#9CA3AF";
 }
-
-function lantaiColor(lantai: string | null | undefined) {
-  if (lantai === "Keramik") return "#3B82F6";
-  if (lantai === "Marmer/Granit") return "#8B5CF6";
-  if (lantai === "Semen") return "#F59E0B";
-  if (lantai === "Kayu") return "#78716C";
+function atapColor(a: string | null | undefined) {
+  if (a === "Genteng") return "#2563EB";
+  if (a === "Seng") return "#F59E0B";
+  if (a === "Asbes") return "#EF4444";
+  return "#9CA3AF";
+}
+function dindingColor(d: string | null | undefined) {
+  if (d === "Tembok") return "#2563EB";
+  if (d === "Kayu") return "#78716C";
+  if (d === "Bambu") return "#22C55E";
+  if (d === "Seng") return "#F59E0B";
   return "#9CA3AF";
 }
 
-// ─── Jenis perubahan label builder ─────────────────────────────────────────
-
-function getJenisPerubahanList(h: any) {
+function getJenisLabel(h: any): string {
   const list: string[] = [];
   if (h.perubahanPagar) list.push("Pagar");
-  if (h.perubahanLuasBangunan) list.push("Luas Bangunan");
-  if (h.perubahanJumlahLantai) list.push("Jumlah Lantai");
-  if (h.perubahanJenisLantai) list.push("Jenis Lantai");
-  if (h.perubahanJenisDinding) list.push("Jenis Dinding");
-  if (h.perubahanLuasLahan) list.push("Luas Lahan");
-  if (h.perubahanJenisAtap) list.push("Jenis Atap");
+  if (h.perubahanLuasBangunan) list.push("L.Bangunan");
+  if (h.perubahanJumlahLantai) list.push("Jml Lantai");
+  if (h.perubahanJenisLantai) list.push("J.Lantai");
+  if (h.perubahanJenisDinding) list.push("J.Dinding");
+  if (h.perubahanLuasLahan) list.push("L.Lahan");
+  if (h.perubahanJenisAtap) list.push("J.Atap");
   return list.length > 0 ? list.join(", ") : "—";
 }
 
-// ─── Spatial analysis options ───────────────────────────────────────────────
-
-type SpatialMode = "klaster" | "smartmap" | "tagging" | null;
-
-const SPATIAL_OPTIONS: { id: SpatialMode; label: string; desc: string; icon: React.ReactNode }[] = [
-  {
-    id: "klaster",
-    label: "Peta Klasterisasi",
-    desc: "Pengelompokan rumah berdasarkan tingkat perubahan (K1/K2/K3)",
-    icon: <Layers className="w-5 h-5" />,
-  },
-  {
-    id: "smartmap",
-    label: "Smart Map",
-    desc: "Persebaran rumah berubah vs tidak berubah secara spasial",
-    icon: <Map className="w-5 h-5" />,
-  },
-  {
-    id: "tagging",
-    label: "Tagging Location",
-    desc: "Distribusi lokasi berdasarkan jenis lantai bangunan",
-    icon: <Tag className="w-5 h-5" />,
-  },
-];
-
-// ─── Main component ─────────────────────────────────────────────────────────
+// ─── Main ───────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
-  const { data: summary, isLoading: isLoadingSummary } = useGetHousingSummary({
-    query: { queryKey: ["dashboard", "summary"] },
-  });
+  const { data: summary, isLoading: sumLoading } = useGetHousingSummary({ query: { queryKey: ["d","sum"] } });
+  const { data: chartData, isLoading: chartLoading } = useGetHousingChartData({ query: { queryKey: ["d","chart"] } });
+  const { data: insight, isLoading: insightLoading } = useGetHousingInsight(undefined, { query: { queryKey: ["d","insight"] } });
+  const { data: allHouses, isLoading: allLoading } = useListHouses(undefined, { query: { queryKey: ["d","all"] } });
+  const { data: changedHouses, isLoading: changedLoading } = useListChangedHouses({ query: { queryKey: ["d","changed"] } });
 
-  const { data: chartData, isLoading: isLoadingChart } = useGetHousingChartData({
-    query: { queryKey: ["dashboard", "chart"] },
-  });
+  const [insightSlide, setInsightSlide] = useState(0);
+  const [searchAll, setSearchAll] = useState("");
+  const [searchChanged, setSearchChanged] = useState("");
+  const [pageAll, setPageAll] = useState(1);
+  const [pageChanged, setPageChanged] = useState(1);
+  // Map sidebar filter
+  const [mapTab, setMapTab] = useState<"klaster" | "smart" | "tagging">("klaster");
+  const [klasterFilter, setKlasterFilter] = useState<string | null>(null);
+  const [smartFilter, setSmartFilter] = useState<string | null>(null);
+  const [lantaiFilter, setLantaiFilter] = useState<string | null>(null);
 
-  const { data: insight, isLoading: isLoadingInsight } = useGetHousingInsight(undefined, {
-    query: { queryKey: ["dashboard", "insight"] },
-  });
+  const PER_PAGE = 10;
 
-  const { data: allHouses, isLoading: isLoadingAll } = useListHouses(undefined, {
-    query: { queryKey: ["dashboard", "allHouses"] },
-  });
+  const insightSlides = useMemo(() => {
+    if (!insight) return [];
+    return [insight.ringkasan, ...insight.poin];
+  }, [insight]);
 
-  const { data: changedHouses, isLoading: isLoadingChanged } = useListChangedHouses({
-    query: { queryKey: ["dashboard", "changedHouses"] },
-  });
+  // Filtered map data — must be above early return (Rules of Hooks)
+  const klasterMapData = useMemo(
+    () =>
+      klasterFilter
+        ? (allHouses ?? []).filter((h) => h.klaster === klasterFilter)
+        : allHouses ?? [],
+    [allHouses, klasterFilter],
+  );
+  const smartMapData = useMemo(
+    () =>
+      smartFilter
+        ? (allHouses ?? []).filter((h) => h.statusPerubahan === smartFilter)
+        : allHouses ?? [],
+    [allHouses, smartFilter],
+  );
+  const lantaiMapData = useMemo(
+    () =>
+      lantaiFilter
+        ? (allHouses ?? []).filter((h) => h.jeniLantai === lantaiFilter)
+        : allHouses ?? [],
+    [allHouses, lantaiFilter],
+  );
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [currentPageAll, setCurrentPageAll] = useState(1);
-  const [currentPageChanged, setCurrentPageChanged] = useState(1);
-  const [spatialMode, setSpatialMode] = useState<SpatialMode>(null);
-  const ITEMS_PER_PAGE = 10;
+  // Sorted bar chart data
+  const barData = useMemo(
+    () =>
+      [...(chartData?.jenisPerubahan ?? [])]
+        .sort((a, b) => b.jumlah - a.jumlah)
+        .map((d, i) => ({ ...d, fill: CHART_COLORS[i % CHART_COLORS.length] })),
+    [chartData],
+  );
 
-  const filterHouses = (houses: any[] = []) => {
-    if (!searchQuery.trim()) return houses;
-    const lower = searchQuery.toLowerCase();
-    return houses.filter(
-      (h) =>
-        h.namaKepalaKeluarga?.toLowerCase().includes(lower) ||
-        h.alamat?.toLowerCase().includes(lower),
-    );
+  const filterAndPage = (data: any[], search: string, page: number) => {
+    const lower = search.toLowerCase();
+    const filtered = search
+      ? data.filter((h) =>
+          h.namaKepalaKeluarga?.toLowerCase().includes(lower) ||
+          h.alamat?.toLowerCase().includes(lower),
+        )
+      : data;
+    const total = Math.ceil(filtered.length / PER_PAGE) || 1;
+    const paged = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+    return { paged, total, count: filtered.length };
   };
 
-  const paginatedAll = useMemo(() => {
-    const filtered = filterHouses(allHouses);
-    return filtered.slice((currentPageAll - 1) * ITEMS_PER_PAGE, currentPageAll * ITEMS_PER_PAGE);
-  }, [allHouses, searchQuery, currentPageAll]);
-
-  const paginatedChanged = useMemo(() => {
-    const filtered = filterHouses(changedHouses);
-    return filtered.slice(
-      (currentPageChanged - 1) * ITEMS_PER_PAGE,
-      currentPageChanged * ITEMS_PER_PAGE,
-    );
-  }, [changedHouses, searchQuery, currentPageChanged]);
-
-  const totalAllPages = allHouses
-    ? Math.ceil(filterHouses(allHouses).length / ITEMS_PER_PAGE)
-    : 1;
-  const totalChangedPages = changedHouses
-    ? Math.ceil(filterHouses(changedHouses).length / ITEMS_PER_PAGE)
-    : 1;
-
-  if (
-    isLoadingSummary ||
-    isLoadingChart ||
-    isLoadingInsight ||
-    isLoadingAll ||
-    isLoadingChanged
-  ) {
+  if (sumLoading || chartLoading || insightLoading || allLoading || changedLoading) {
     return <DashboardSkeleton />;
   }
 
-  const validJenisPerubahan = summary?.byJenisPerubahan.filter((j) => j.jumlah > 0) || [];
+  const validJenis = (summary?.byJenisPerubahan ?? []).filter((j) => j.jumlah > 0);
+  const { paged: pagedAll, total: totalAllPages, count: countAll } =
+    filterAndPage(allHouses ?? [], searchAll, pageAll);
+  const { paged: pagedChanged, total: totalChangedPages, count: countChanged } =
+    filterAndPage(changedHouses ?? [], searchChanged, pageChanged);
 
-  // ─── Render ────────────────────────────────────────────────────────────────
+  // Klaster counts
+  const klasterCounts = Object.fromEntries(
+    (summary?.byKlaster ?? []).map((k) => [k.label, k.jumlah]),
+  );
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-10 animate-in fade-in zoom-in-95 duration-500">
+    <div className="container mx-auto px-4 py-8 space-y-8 animate-in fade-in duration-300">
 
-      {/* ── Page Header ──────────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-1">
-        <h1 className="text-3xl font-bold tracking-tight">TAPO</h1>
-        <p className="text-muted-foreground text-sm font-medium uppercase tracking-widest">
-          Kelurahan Boting · Dashboard Perubahan Rumah
+      {/* ── Page Header ──────────────────────────────────────────────── */}
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Dashboard Perubahan Rumah</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          Ringkasan perubahan bangunan berdasarkan data tahun 2024
         </p>
       </div>
 
-      {/* ── SECTION 1 — Dashboard Ringkasan ─────────────────────────────── */}
-      <section className="space-y-4">
-        <SectionLabel label="SECTION 1" title="Dashboard Ringkasan" />
+      {/* ── SUMMARY + SMART INSIGHT ──────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-        {/* Row 1: 3 primary metric cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Total */}
-          <Card className="bg-primary/5 border-primary/20 shadow-sm relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-4 opacity-10">
-              <Home className="w-24 h-24 text-primary" />
-            </div>
-            <CardHeader className="pb-1">
-              <CardTitle className="text-xs font-semibold text-primary uppercase tracking-wider">
-                Total Rumah Terdata
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-5xl font-bold text-primary font-mono tracking-tighter">
-                {summary?.totalRumah.toLocaleString("id-ID")}
+        {/* Left column: Big stat + Smart Insight */}
+        <div className="flex flex-col gap-4">
+          {/* X / Y stat */}
+          <Card className="border shadow-sm">
+            <CardContent className="pt-5 pb-4 px-5">
+              <div className="text-4xl font-bold tracking-tight font-mono">
+                <span className="text-foreground">{summary?.rumahBerubah}</span>
+                <span className="text-muted-foreground/50 mx-1.5">/</span>
+                <span className="text-muted-foreground">{summary?.totalRumah}</span>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Berubah */}
-          <Card className="bg-destructive/5 border-destructive/20 shadow-sm relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-4 opacity-10">
-              <Activity className="w-24 h-24 text-destructive" />
-            </div>
-            <CardHeader className="pb-1">
-              <CardTitle className="text-xs font-semibold text-destructive uppercase tracking-wider">
-                Rumah Mengalami Perubahan
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex items-end gap-3">
-              <div className="text-5xl font-bold text-destructive font-mono tracking-tighter">
-                {summary?.rumahBerubah.toLocaleString("id-ID")}
-              </div>
-              <div className="mb-1 flex items-center gap-1.5 text-destructive/80 font-medium">
+              <p className="text-sm text-muted-foreground mt-1.5">rumah mengalami perubahan</p>
+              <div className="flex gap-2 mt-3">
                 <Badge variant="destructive" className="font-mono text-xs">
-                  {summary?.persenPerubahan.toFixed(1)}%
+                  {summary?.persenPerubahan.toFixed(1)}% berubah
                 </Badge>
-                <span className="text-xs text-muted-foreground">dari total</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Tidak berubah */}
-          <Card className="bg-emerald-50 border-emerald-200 shadow-sm relative overflow-hidden dark:bg-emerald-950/20 dark:border-emerald-900">
-            <div className="absolute top-0 right-0 p-4 opacity-10">
-              <CheckCircle2 className="w-24 h-24 text-emerald-600" />
-            </div>
-            <CardHeader className="pb-1">
-              <CardTitle className="text-xs font-semibold text-emerald-700 uppercase tracking-wider dark:text-emerald-400">
-                Rumah Tidak Berubah
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex items-end gap-3">
-              <div className="text-5xl font-bold text-emerald-700 font-mono tracking-tighter dark:text-emerald-400">
-                {summary?.rumahTidakBerubah.toLocaleString("id-ID")}
-              </div>
-              <div className="mb-1">
-                <Badge
-                  className="font-mono text-xs bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-900 dark:text-emerald-300"
-                  variant="outline"
-                >
-                  {summary && summary.totalRumah > 0
-                    ? (100 - summary.persenPerubahan).toFixed(1)
-                    : "0"}%
+                <Badge variant="outline" className="font-mono text-xs text-emerald-600 border-emerald-400">
+                  {(100 - (summary?.persenPerubahan ?? 0)).toFixed(1)}% stabil
                 </Badge>
               </div>
             </CardContent>
           </Card>
-        </div>
 
-        {/* Row 2: 7 jenis perubahan mini cards */}
-        {validJenisPerubahan.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-            {validJenisPerubahan.map((jenis, idx) => (
-              <Card key={idx} className="shadow-sm border-border">
-                <CardHeader className="p-3 pb-0">
-                  <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase leading-tight line-clamp-2 h-7">
-                    {jenis.label}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-3 pt-1">
-                  <div className="text-xl font-bold font-mono text-foreground">
-                    {jenis.jumlah.toLocaleString("id-ID")}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* ── SECTION 2 — Smart Insight ────────────────────────────────────── */}
-      <section className="space-y-4">
-        <SectionLabel label="SECTION 2" title="Smart Insight" />
-
-        <Card className="bg-foreground text-background border-none shadow-md overflow-hidden relative">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-primary/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
-          <CardHeader className="relative z-10">
-            <CardTitle className="text-base font-semibold flex items-center gap-2 text-primary-foreground">
-              <Settings2 className="w-4 h-4 text-primary-foreground/70" />
-              Smart Insight — Kelurahan Boting
-            </CardTitle>
-            <CardDescription className="text-primary-foreground/60">
-              Analisis otomatis berdasarkan seluruh data terkini
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="relative z-10">
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 lg:gap-10">
-              {/* Ringkasan */}
-              <div className="lg:col-span-2">
-                <p className="text-lg font-medium leading-relaxed">
-                  {insight?.ringkasan}
-                </p>
-              </div>
-              {/* Poin */}
-              <div className="lg:col-span-3 space-y-3">
-                {insight?.poin.map((p, idx) => (
-                  <div key={idx} className="flex items-start gap-3">
-                    <ArrowRight className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                    <span className="text-sm text-primary-foreground/90 leading-relaxed">{p}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </section>
-
-      {/* ── SECTION 2B — Distribusi Perubahan ───────────────────────────── */}
-      <section className="space-y-4">
-        <SectionLabel label="DISTRIBUSI" title="Distribusi Jenis Perubahan" />
-
-        <Card className="shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-primary" />
-              Proporsi Jenis Perubahan Rumah
-            </CardTitle>
-            <CardDescription>
-              Donut chart menampilkan proporsi dari{" "}
-              {chartData?.jenisPerubahan.reduce((s, x) => s + x.jumlah, 0) ?? 0} kejadian
-              perubahan pada {summary?.rumahBerubah ?? 0} rumah
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col lg:flex-row items-center gap-8">
-              {/* Chart */}
-              <div className="h-[260px] w-full max-w-xs flex-shrink-0 relative">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={chartData?.jenisPerubahan}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={70}
-                      outerRadius={100}
-                      paddingAngle={2}
-                      dataKey="jumlah"
-                      nameKey="label"
-                      stroke="none"
-                    >
-                      {chartData?.jenisPerubahan.map((_, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={CHART_PALETTE[index % CHART_PALETTE.length]}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      formatter={(value: number) => [`${value} Rumah`, "Jumlah"]}
-                      contentStyle={{
-                        borderRadius: "8px",
-                        border: "1px solid var(--color-border)",
-                        fontSize: "12px",
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-3xl font-bold font-mono text-foreground leading-none">
-                    {summary?.rumahBerubah}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold mt-1">
-                    Rumah Berubah
-                  </span>
-                </div>
-              </div>
-
-              {/* Legend */}
-              <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
-                {chartData?.jenisPerubahan.map((entry, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-muted/40 border border-border"
-                  >
-                    <div
-                      className="w-3 h-3 rounded-full shrink-0"
-                      style={{ backgroundColor: CHART_PALETTE[index % CHART_PALETTE.length] }}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-medium text-foreground leading-tight truncate">
-                        {entry.label}
-                      </div>
-                    </div>
-                    <div className="font-mono font-bold text-sm text-foreground shrink-0">
-                      {entry.jumlah}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </section>
-
-      {/* ── SECTION 3 — Tabel Data Terstruktur ──────────────────────────── */}
-      <section className="space-y-4">
-        <SectionLabel label="SECTION 3" title="Tabel Data Terstruktur" />
-
-        <Tabs defaultValue="all" className="w-full">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-            <TabsList className="grid w-full sm:w-[400px] grid-cols-2">
-              <TabsTrigger value="all">Seluruh Rumah</TabsTrigger>
-              <TabsTrigger value="changed">Mengalami Perubahan</TabsTrigger>
-            </TabsList>
-            <div className="relative w-full sm:w-64">
-              <Input
-                placeholder="Cari Nama KK atau Alamat..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentPageAll(1);
-                  setCurrentPageChanged(1);
-                }}
-                className="pl-8"
-              />
-              <Info className="w-4 h-4 absolute left-2.5 top-2.5 text-muted-foreground" />
-            </div>
-          </div>
-
-          <TabsContent value="all" className="m-0 border rounded-md shadow-sm bg-card overflow-hidden">
-            <HouseTable
-              data={paginatedAll}
-              page={currentPageAll}
-              totalPages={totalAllPages}
-              onPageChange={setCurrentPageAll}
-            />
-          </TabsContent>
-
-          <TabsContent
-            value="changed"
-            className="m-0 border rounded-md shadow-sm bg-card overflow-hidden"
-          >
-            <HouseTable
-              data={paginatedChanged}
-              page={currentPageChanged}
-              totalPages={totalChangedPages}
-              onPageChange={setCurrentPageChanged}
-            />
-          </TabsContent>
-        </Tabs>
-      </section>
-
-      {/* ── SECTION 4 — Analisis Spasial (Interactive) ──────────────────── */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <SectionLabel label="SECTION 4" title="Analisis Spasial" noMargin />
-          <Link
-            href="/smart-map"
-            className="text-sm font-semibold text-primary flex items-center gap-1 hover:underline"
-          >
-            Buka Smart Map <ChevronRight className="w-4 h-4" />
-          </Link>
-        </div>
-
-        {/* Mode selector */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {SPATIAL_OPTIONS.map((opt) => {
-            const isActive = spatialMode === opt.id;
-            return (
-              <button
-                key={opt.id}
-                onClick={() => setSpatialMode(isActive ? null : opt.id)}
-                className={[
-                  "flex items-start gap-3 rounded-lg border p-4 text-left transition-all duration-150 w-full",
-                  isActive
-                    ? "border-primary bg-primary/5 shadow-md ring-2 ring-primary/20"
-                    : "border-border bg-card hover:border-primary/40 hover:bg-muted/30",
-                ].join(" ")}
-              >
-                <div
-                  className={[
-                    "mt-0.5 rounded-md p-1.5 shrink-0",
-                    isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground",
-                  ].join(" ")}
-                >
-                  {opt.icon}
-                </div>
-                <div>
-                  <div
-                    className={[
-                      "text-sm font-semibold leading-tight",
-                      isActive ? "text-primary" : "text-foreground",
-                    ].join(" ")}
-                  >
-                    {opt.label}
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1 leading-snug">{opt.desc}</div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Map panel — empty state or selected map */}
-        {spatialMode === null ? (
-          <Card className="border-dashed border-2 bg-muted/20">
-            <CardContent className="flex flex-col items-center justify-center py-16 gap-4">
-              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-                <MapPin className="w-8 h-8 text-muted-foreground" />
-              </div>
-              <div className="text-center space-y-1 max-w-sm">
-                <p className="text-base font-semibold text-foreground">
-                  Pilih Jenis Analisis Spasial
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Silakan pilih salah satu jenis analisis di atas untuk menampilkan visualisasi peta.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        ) : spatialMode === "klaster" ? (
-          <Card className="shadow-sm overflow-hidden">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-primary" />
-                    Peta Klasterisasi Spasial
-                  </CardTitle>
-                  <CardDescription className="text-xs mt-0.5">
-                    Pengelompokan rumah berdasarkan jumlah jenis perubahan (K1=0, K2=1–2, K3≥3)
-                  </CardDescription>
-                </div>
-                <button
-                  onClick={() => setSpatialMode(null)}
-                  className="text-xs text-muted-foreground hover:text-foreground border rounded px-2 py-1 transition-colors"
-                >
-                  Tutup
-                </button>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <LeafletMapEngine
-                data={allHouses || []}
-                height="450px"
-                colorByField="klaster"
-                colorMap={klasterColor}
-                legend={[
-                  { label: "K1 — Tidak/Sedikit Berubah", color: "#22C55E" },
-                  { label: "K2 — Perubahan Sedang", color: "#F59E0B" },
-                  { label: "K3 — Perubahan Signifikan", color: "#EF4444" },
-                ]}
-                popupContent={(h) => (
-                  <div className="space-y-1.5">
-                    <div className="font-bold text-sm">{h.id}</div>
-                    <div className="text-xs">{h.namaKepalaKeluarga}</div>
-                    <div className="text-xs text-muted-foreground">{h.alamat}</div>
-                    <Badge
-                      className="text-[10px] mt-1"
-                      style={{ backgroundColor: klasterColor(h.klaster) }}
-                    >
-                      {h.klaster} · {h.jumlahJenisPerubahan} perubahan
-                    </Badge>
-                  </div>
-                )}
-              />
-            </CardContent>
-          </Card>
-        ) : spatialMode === "smartmap" ? (
-          <Card className="shadow-sm overflow-hidden">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                    <Map className="w-4 h-4 text-primary" />
-                    Smart Map
-                  </CardTitle>
-                  <CardDescription className="text-xs mt-0.5">
-                    Persebaran spasial rumah berubah vs tidak berubah
-                  </CardDescription>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Link
-                    href="/smart-map"
-                    className="text-xs text-primary font-semibold border border-primary/30 rounded px-2 py-1 hover:bg-primary/5 transition-colors"
-                  >
-                    Buka Smart Map Lengkap →
-                  </Link>
+          {/* Smart Insight carousel */}
+          <Card className="border shadow-sm flex-1">
+            <CardContent className="pt-4 pb-4 px-5 h-full flex flex-col">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-bold tracking-widest text-primary uppercase">
+                  Smart Insight
+                </span>
+                <div className="flex gap-1">
                   <button
-                    onClick={() => setSpatialMode(null)}
-                    className="text-xs text-muted-foreground hover:text-foreground border rounded px-2 py-1 transition-colors"
+                    onClick={() => setInsightSlide((s) => Math.max(0, s - 1))}
+                    disabled={insightSlide === 0}
+                    className="w-6 h-6 rounded-full border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-primary disabled:opacity-30 transition-colors"
                   >
-                    Tutup
+                    <ChevronLeft className="w-3 h-3" />
+                  </button>
+                  <button
+                    onClick={() =>
+                      setInsightSlide((s) => Math.min(insightSlides.length - 1, s + 1))
+                    }
+                    disabled={insightSlide === insightSlides.length - 1}
+                    className="w-6 h-6 rounded-full border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-primary disabled:opacity-30 transition-colors"
+                  >
+                    <ChevronRight className="w-3 h-3" />
                   </button>
                 </div>
               </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <LeafletMapEngine
-                data={allHouses || []}
-                height="450px"
-                colorByField="statusPerubahan"
-                colorMap={statusColor}
-                legend={[
-                  { label: "Berubah", color: "#EF4444" },
-                  { label: "Tidak Berubah", color: "#22C55E" },
-                ]}
-                popupContent={(h) => (
-                  <div className="space-y-1.5">
-                    <div className="font-bold text-sm">{h.id}</div>
-                    <div className="text-xs">{h.namaKepalaKeluarga}</div>
-                    <div className="text-xs text-muted-foreground">{h.alamat}</div>
-                    <Badge
-                      variant={h.statusPerubahan === "berubah" ? "destructive" : "outline"}
-                      className="text-[10px] mt-1"
-                    >
-                      {h.statusPerubahan === "berubah" ? "BERUBAH" : "TIDAK BERUBAH"}
-                    </Badge>
-                    {h.statusPerubahan === "berubah" && (
-                      <div className="text-[10px] text-muted-foreground mt-1">
-                        {getJenisPerubahanList(h)}
-                      </div>
-                    )}
-                  </div>
-                )}
-              />
-            </CardContent>
-          </Card>
-        ) : (
-          /* tagging */
-          <Card className="shadow-sm overflow-hidden">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                    <Tag className="w-4 h-4 text-primary" />
-                    Peta Tagging Location
-                  </CardTitle>
-                  <CardDescription className="text-xs mt-0.5">
-                    Distribusi spasial berdasarkan jenis lantai bangunan
-                  </CardDescription>
-                </div>
-                <button
-                  onClick={() => setSpatialMode(null)}
-                  className="text-xs text-muted-foreground hover:text-foreground border rounded px-2 py-1 transition-colors"
-                >
-                  Tutup
-                </button>
+
+              <p className="text-sm leading-relaxed flex-1 text-foreground">
+                {insightSlides[insightSlide] ?? ""}
+              </p>
+
+              {/* Dot indicators */}
+              <div className="flex gap-1.5 mt-4">
+                {insightSlides.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setInsightSlide(i)}
+                    className={[
+                      "h-1.5 rounded-full transition-all duration-200",
+                      i === insightSlide
+                        ? "bg-primary w-5"
+                        : "bg-muted-foreground/25 w-1.5 hover:bg-muted-foreground/50",
+                    ].join(" ")}
+                  />
+                ))}
               </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <LeafletMapEngine
-                data={allHouses || []}
-                height="450px"
-                colorByField="jeniLantai"
-                colorMap={lantaiColor}
-                legend={[
-                  { label: "Keramik", color: "#3B82F6" },
-                  { label: "Marmer/Granit", color: "#8B5CF6" },
-                  { label: "Semen", color: "#F59E0B" },
-                  { label: "Kayu", color: "#78716C" },
-                ]}
-                popupContent={(h) => (
-                  <div className="space-y-1.5">
-                    <div className="font-bold text-sm">{h.id}</div>
-                    <div className="text-xs">{h.namaKepalaKeluarga}</div>
-                    <div className="text-xs text-muted-foreground">{h.alamat}</div>
-                    <div
-                      className="text-[10px] font-semibold rounded px-1.5 py-0.5 inline-block mt-1 text-white"
-                      style={{ backgroundColor: lantaiColor(h.jeniLantai) }}
-                    >
-                      Lantai: {h.jeniLantai || "—"}
-                    </div>
-                  </div>
-                )}
-              />
             </CardContent>
           </Card>
-        )}
-      </section>
-    </div>
-  );
-}
+        </div>
 
-// ─── Section label ──────────────────────────────────────────────────────────
-
-function SectionLabel({
-  label,
-  title,
-  noMargin,
-}: {
-  label: string;
-  title: string;
-  noMargin?: boolean;
-}) {
-  return (
-    <div className={noMargin ? "" : ""}>
-      <div className="flex items-center gap-3">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground bg-muted px-2 py-0.5 rounded">
-          {label}
-        </span>
-        <div className="flex-1 h-px bg-border" />
+        {/* Right: 2x3 grid of 6 change-type mini cards */}
+        <div className="lg:col-span-2 grid grid-cols-3 gap-3">
+          {validJenis.slice(0, 6).map((jenis, idx) => (
+            <Card key={idx} className="border shadow-sm">
+              <CardContent className="pt-4 pb-3 px-4">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide leading-tight line-clamp-2">
+                  {jenis.label}
+                </p>
+                <p className="text-2xl font-bold font-mono mt-2 text-foreground">
+                  {jenis.jumlah}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+          {/* If 7th change type exists */}
+          {validJenis.length === 7 && (
+            <Card className="border shadow-sm col-span-3">
+              <CardContent className="pt-3 pb-3 px-4 flex items-center justify-between">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                  {validJenis[6].label}
+                </p>
+                <p className="text-2xl font-bold font-mono text-foreground">{validJenis[6].jumlah}</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
-      <h2 className="text-lg font-bold tracking-tight mt-2">{title}</h2>
+
+      {/* ── CONTENT TABS: Grafik | Tabel Seluruhnya | Tabel Perubahan ── */}
+      <div className="border rounded-lg bg-card shadow-sm overflow-hidden">
+        <Tabs defaultValue="grafik">
+          <div className="border-b px-1">
+            <TabsList className="bg-transparent h-auto rounded-none gap-0 p-0">
+              {[
+                { value: "grafik", label: "Grafik Perubahan" },
+                { value: "all", label: "Tabel Seluruhnya" },
+                { value: "changed", label: "Tabel Perubahan" },
+              ].map((t) => (
+                <TabsTrigger
+                  key={t.value}
+                  value={t.value}
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-5 py-3 text-sm font-medium text-muted-foreground data-[state=active]:text-primary"
+                >
+                  {t.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
+
+          {/* Grafik Perubahan */}
+          <TabsContent value="grafik" className="m-0 p-5">
+            <h3 className="text-sm font-semibold mb-4">Perubahan paling dominan</h3>
+            {barData.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">Tidak ada data perubahan.</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={barData.length * 44 + 20}>
+                <BarChart
+                  layout="vertical"
+                  data={barData}
+                  margin={{ top: 0, right: 60, bottom: 0, left: 10 }}
+                  barSize={20}
+                >
+                  <XAxis type="number" hide />
+                  <YAxis
+                    type="category"
+                    dataKey="label"
+                    width={160}
+                    tick={{ fontSize: 12, fill: "var(--color-muted-foreground)" }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    cursor={{ fill: "var(--color-muted)", opacity: 0.4 }}
+                    formatter={(v: number) => [`${v} rumah`, "Jumlah"]}
+                    contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid var(--color-border)" }}
+                  />
+                  <Bar dataKey="jumlah" radius={[0, 4, 4, 0]}>
+                    {barData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                    <LabelList
+                      dataKey="jumlah"
+                      position="right"
+                      style={{ fontSize: 12, fontWeight: 600, fontFamily: "monospace" }}
+                    />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </TabsContent>
+
+          {/* Tabel Seluruhnya */}
+          <TabsContent value="all" className="m-0">
+            <div className="px-4 py-3 border-b flex items-center gap-3">
+              <div className="relative flex-1 max-w-xs">
+                <Input
+                  placeholder="Cari Nama KK atau Alamat..."
+                  value={searchAll}
+                  onChange={(e) => { setSearchAll(e.target.value); setPageAll(1); }}
+                  className="pl-8 h-8 text-sm"
+                />
+                <Info className="w-3.5 h-3.5 absolute left-2.5 top-2 text-muted-foreground" />
+              </div>
+              <span className="text-xs text-muted-foreground">{countAll} data</span>
+            </div>
+            <HouseTable data={pagedAll} page={pageAll} totalPages={totalAllPages} onPageChange={setPageAll} />
+          </TabsContent>
+
+          {/* Tabel Perubahan */}
+          <TabsContent value="changed" className="m-0">
+            <div className="px-4 py-3 border-b flex items-center gap-3">
+              <div className="relative flex-1 max-w-xs">
+                <Input
+                  placeholder="Cari Nama KK atau Alamat..."
+                  value={searchChanged}
+                  onChange={(e) => { setSearchChanged(e.target.value); setPageChanged(1); }}
+                  className="pl-8 h-8 text-sm"
+                />
+                <Info className="w-3.5 h-3.5 absolute left-2.5 top-2 text-muted-foreground" />
+              </div>
+              <span className="text-xs text-muted-foreground">{countChanged} rumah berubah</span>
+            </div>
+            <HouseTable data={pagedChanged} page={pageChanged} totalPages={totalChangedPages} onPageChange={setPageChanged} />
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      {/* ── PETA SECTION ─────────────────────────────────────────────── */}
+      <div className="border rounded-lg bg-card shadow-sm overflow-hidden">
+        <Tabs value={mapTab} onValueChange={(v) => setMapTab(v as typeof mapTab)}>
+          <div className="border-b px-1">
+            <div className="flex items-center justify-between pr-4">
+              <TabsList className="bg-transparent h-auto rounded-none gap-0 p-0">
+                {[
+                  { value: "klaster", label: "Peta Klasterisasi" },
+                  { value: "smart", label: "SMART MAP" },
+                  { value: "tagging", label: "Peta Tagging Location" },
+                ].map((t) => (
+                  <TabsTrigger
+                    key={t.value}
+                    value={t.value}
+                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-5 py-3 text-sm font-medium text-muted-foreground data-[state=active]:text-primary"
+                  >
+                    {t.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              <Link
+                href="/smart-map"
+                className="text-xs text-primary font-medium flex items-center gap-1 hover:underline"
+              >
+                Buka Smart Map <ExternalLink className="w-3 h-3" />
+              </Link>
+            </div>
+          </div>
+
+          {/* PETA KLASTERISASI */}
+          <TabsContent value="klaster" className="m-0">
+            <div className="flex flex-col lg:flex-row">
+              <div className="flex-1 min-w-0">
+                <LeafletMapEngine
+                  data={klasterMapData}
+                  height="420px"
+                  colorByField="klaster"
+                  colorMap={klasterColor}
+                  legend={[]}
+                  popupContent={(h) => (
+                    <div className="space-y-1">
+                      <div className="font-bold text-sm">{h.id}</div>
+                      <div className="text-xs">{h.namaKepalaKeluarga}</div>
+                      <div className="text-xs text-muted-foreground">{h.rt} · {h.rw}</div>
+                      <Badge className="text-[10px]" style={{ backgroundColor: klasterColor(h.klaster) }}>
+                        {h.klaster} · {h.jumlahJenisPerubahan} perubahan
+                      </Badge>
+                    </div>
+                  )}
+                />
+              </div>
+              {/* Sidebar Klaster */}
+              <div className="lg:w-56 xl:w-64 border-t lg:border-t-0 lg:border-l p-4 flex flex-col gap-3">
+                {[
+                  { key: "K1", label: "K1 — Tidak ada perubahan", sub: "0 jenis", color: "#22C55E", desc: `${klasterCounts["K1"] ?? 0} rumah tidak memiliki perubahan terdeteksi.` },
+                  { key: "K2", label: "K2 — Perubahan sedang", sub: "1–2 jenis", color: "#F59E0B", desc: `${klasterCounts["K2"] ?? 0} rumah mengalami 1–2 jenis perubahan.` },
+                  { key: "K3", label: "K3 — Perubahan signifikan", sub: "3+ jenis", color: "#EF4444", desc: `${klasterCounts["K3"] ?? 0} rumah mengalami 3 atau lebih jenis perubahan.` },
+                ].map((item) => {
+                  const isActive = klasterFilter === item.key;
+                  return (
+                    <button
+                      key={item.key}
+                      onClick={() => setKlasterFilter(isActive ? null : item.key)}
+                      className={[
+                        "flex items-start gap-2.5 rounded-lg p-3 text-left border transition-all duration-150 w-full",
+                        isActive
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background border-border hover:border-muted-foreground/40",
+                      ].join(" ")}
+                    >
+                      <span
+                        className="w-2.5 h-2.5 rounded-full mt-0.5 shrink-0"
+                        style={{ backgroundColor: item.color }}
+                      />
+                      <div>
+                        <div className={["text-xs font-semibold leading-tight", isActive ? "text-primary-foreground" : "text-foreground"].join(" ")}>
+                          {item.label}
+                        </div>
+                        <div className={["text-[10px] mt-0.5", isActive ? "text-primary-foreground/70" : "text-muted-foreground"].join(" ")}>
+                          ({item.sub})
+                        </div>
+                      </div>
+                      <span className={["ml-auto font-mono text-sm font-bold", isActive ? "text-primary-foreground" : "text-foreground"].join(" ")}>
+                        {klasterCounts[item.key] ?? 0}
+                      </span>
+                    </button>
+                  );
+                })}
+
+                <div className="mt-2 pt-3 border-t">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                    Informasi Klaster
+                  </p>
+                  {klasterFilter ? (
+                    <p className="text-xs text-foreground leading-relaxed">
+                      {klasterFilter === "K1" && `${klasterCounts["K1"] ?? 0} rumah tidak memiliki perubahan terdeteksi.`}
+                      {klasterFilter === "K2" && `${klasterCounts["K2"] ?? 0} rumah mengalami 1–2 jenis perubahan fisik.`}
+                      {klasterFilter === "K3" && `${klasterCounts["K3"] ?? 0} rumah mengalami perubahan signifikan (≥3 jenis).`}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Klik klaster di atas untuk memfilter tampilan peta dan melihat detail distribusi.
+                    </p>
+                  )}
+                  {klasterFilter && (
+                    <button
+                      onClick={() => setKlasterFilter(null)}
+                      className="text-[10px] text-primary underline mt-2"
+                    >
+                      Tampilkan semua
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* SMART MAP */}
+          <TabsContent value="smart" className="m-0">
+            <div className="flex flex-col lg:flex-row">
+              <div className="flex-1 min-w-0">
+                <LeafletMapEngine
+                  data={smartMapData}
+                  height="420px"
+                  colorByField="statusPerubahan"
+                  colorMap={statusColor}
+                  legend={[]}
+                  popupContent={(h) => (
+                    <div className="space-y-1">
+                      <div className="font-bold text-sm">{h.id}</div>
+                      <div className="text-xs">{h.namaKepalaKeluarga}</div>
+                      <div className="text-xs text-muted-foreground">{h.rt} · {h.rw}</div>
+                      <Badge variant={h.statusPerubahan === "berubah" ? "destructive" : "outline"} className="text-[10px]">
+                        {h.statusPerubahan === "berubah" ? "BERUBAH" : "TIDAK BERUBAH"}
+                      </Badge>
+                      {h.statusPerubahan === "berubah" && (
+                        <div className="text-[10px] text-muted-foreground">{getJenisLabel(h)}</div>
+                      )}
+                    </div>
+                  )}
+                />
+              </div>
+              {/* Sidebar Smart */}
+              <div className="lg:w-56 xl:w-64 border-t lg:border-t-0 lg:border-l p-4 flex flex-col gap-3">
+                {[
+                  { key: "berubah", label: "Berubah", color: "#EF4444", count: summary?.rumahBerubah ?? 0, desc: `${summary?.persenPerubahan.toFixed(1)}% dari total` },
+                  { key: "tidak_berubah", label: "Tidak Berubah", color: "#22C55E", count: summary?.rumahTidakBerubah ?? 0, desc: `${(100 - (summary?.persenPerubahan ?? 0)).toFixed(1)}% dari total` },
+                ].map((item) => {
+                  const isActive = smartFilter === item.key;
+                  return (
+                    <button
+                      key={item.key}
+                      onClick={() => setSmartFilter(isActive ? null : item.key)}
+                      className={[
+                        "flex items-start gap-2.5 rounded-lg p-3 text-left border transition-all duration-150 w-full",
+                        isActive
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background border-border hover:border-muted-foreground/40",
+                      ].join(" ")}
+                    >
+                      <span className="w-2.5 h-2.5 rounded-full mt-0.5 shrink-0" style={{ backgroundColor: item.color }} />
+                      <div>
+                        <div className={["text-xs font-semibold", isActive ? "text-primary-foreground" : "text-foreground"].join(" ")}>
+                          {item.label}
+                        </div>
+                        <div className={["text-[10px] mt-0.5", isActive ? "text-primary-foreground/70" : "text-muted-foreground"].join(" ")}>
+                          {item.desc}
+                        </div>
+                      </div>
+                      <span className={["ml-auto font-mono text-sm font-bold", isActive ? "text-primary-foreground" : "text-foreground"].join(" ")}>
+                        {item.count}
+                      </span>
+                    </button>
+                  );
+                })}
+
+                <div className="mt-2 pt-3 border-t">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                    Informasi Distribusi
+                  </p>
+                  {smartFilter ? (
+                    <p className="text-xs text-foreground leading-relaxed">
+                      {smartFilter === "berubah"
+                        ? `${summary?.rumahBerubah} rumah mengalami setidaknya 1 jenis perubahan fisik.`
+                        : `${summary?.rumahTidakBerubah} rumah tidak mengalami perubahan yang terdeteksi.`}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Klik status di atas untuk memfilter tampilan peta.
+                    </p>
+                  )}
+                  {smartFilter && (
+                    <button onClick={() => setSmartFilter(null)} className="text-[10px] text-primary underline mt-2">
+                      Tampilkan semua
+                    </button>
+                  )}
+                </div>
+
+                <div className="pt-3 border-t">
+                  <Link href="/smart-map" className="text-xs text-primary font-semibold flex items-center gap-1 hover:underline">
+                    Smart Map lengkap dengan filter <ExternalLink className="w-3 h-3" />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* PETA TAGGING LOCATION */}
+          <TabsContent value="tagging" className="m-0">
+            <div className="flex flex-col lg:flex-row">
+              <div className="flex-1 min-w-0">
+                <LeafletMapEngine
+                  data={lantaiMapData}
+                  height="420px"
+                  colorByField="jeniLantai"
+                  colorMap={lantaiColor}
+                  legend={[]}
+                  popupContent={(h) => (
+                    <div className="space-y-1">
+                      <div className="font-bold text-sm">{h.id}</div>
+                      <div className="text-xs">{h.namaKepalaKeluarga}</div>
+                      <div className="text-xs text-muted-foreground">{h.rt} · {h.rw}</div>
+                      <div className="text-[10px] font-semibold rounded px-1.5 py-0.5 text-white inline-block mt-1"
+                        style={{ backgroundColor: lantaiColor(h.jeniLantai) }}>
+                        Lantai: {h.jeniLantai ?? "—"}
+                      </div>
+                    </div>
+                  )}
+                />
+              </div>
+              {/* Sidebar Tagging */}
+              <div className="lg:w-56 xl:w-64 border-t lg:border-t-0 lg:border-l p-4 flex flex-col gap-3">
+                {(summary?.byJenisLantai ?? []).map((item) => {
+                  const isActive = lantaiFilter === item.label;
+                  const color = lantaiColor(item.label);
+                  return (
+                    <button
+                      key={item.label}
+                      onClick={() => setLantaiFilter(isActive ? null : item.label)}
+                      className={[
+                        "flex items-start gap-2.5 rounded-lg p-3 text-left border transition-all duration-150 w-full",
+                        isActive
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background border-border hover:border-muted-foreground/40",
+                      ].join(" ")}
+                    >
+                      <span className="w-2.5 h-2.5 rounded-full mt-0.5 shrink-0" style={{ backgroundColor: color }} />
+                      <div className={["text-xs font-semibold", isActive ? "text-primary-foreground" : "text-foreground"].join(" ")}>
+                        {item.label}
+                      </div>
+                      <span className={["ml-auto font-mono text-sm font-bold", isActive ? "text-primary-foreground" : "text-foreground"].join(" ")}>
+                        {item.jumlah}
+                      </span>
+                    </button>
+                  );
+                })}
+
+                <div className="mt-2 pt-3 border-t">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                    Informasi Tagging
+                  </p>
+                  {lantaiFilter ? (
+                    <p className="text-xs text-foreground leading-relaxed">
+                      {(summary?.byJenisLantai ?? []).find((j) => j.label === lantaiFilter)?.jumlah ?? 0} rumah
+                      menggunakan lantai jenis <strong>{lantaiFilter}</strong>.
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Klik jenis lantai di atas untuk memfilter tampilan peta.
+                    </p>
+                  )}
+                  {lantaiFilter && (
+                    <button onClick={() => setLantaiFilter(null)} className="text-[10px] text-primary underline mt-2">
+                      Tampilkan semua
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+
     </div>
   );
 }
@@ -700,43 +664,33 @@ function SectionLabel({
 // ─── House table ────────────────────────────────────────────────────────────
 
 function HouseTable({
-  data,
-  page,
-  totalPages,
-  onPageChange,
+  data, page, totalPages, onPageChange,
 }: {
-  data: any[];
-  page: number;
-  totalPages: number;
-  onPageChange: (p: number) => void;
+  data: any[]; page: number; totalPages: number; onPageChange: (p: number) => void;
 }) {
   return (
-    <div className="flex flex-col w-full">
+    <div className="flex flex-col">
       <div className="overflow-x-auto">
         <Table>
-          <TableHeader className="bg-muted/50">
+          <TableHeader className="bg-muted/40">
             <TableRow>
-              <TableHead className="w-12 text-center">No.</TableHead>
-              <TableHead>Nama KK</TableHead>
-              <TableHead>Alamat</TableHead>
-              <TableHead className="w-16">RT</TableHead>
-              <TableHead className="w-16">RW</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Jenis Perubahan</TableHead>
-              <TableHead>Kondisi</TableHead>
-              <TableHead>Klaster</TableHead>
+              <TableHead className="w-10 text-center text-xs">No.</TableHead>
+              <TableHead className="text-xs">Nama KK</TableHead>
+              <TableHead className="text-xs">Alamat</TableHead>
+              <TableHead className="w-14 text-xs">RT/RW</TableHead>
+              <TableHead className="text-xs">Status</TableHead>
+              <TableHead className="text-xs">Jenis Perubahan</TableHead>
+              <TableHead className="text-xs">Kondisi</TableHead>
+              <TableHead className="text-xs">Klaster</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.length === 0 ? (
               <TableRow>
-                <TableCell
-                  colSpan={9}
-                  className="text-center py-10 text-muted-foreground"
-                >
+                <TableCell colSpan={8} className="text-center py-10 text-muted-foreground text-sm">
                   <div className="flex flex-col items-center gap-2">
-                    <AlertCircle className="w-8 h-8 text-muted-foreground/40" />
-                    <span>Tidak ada data yang ditemukan.</span>
+                    <AlertCircle className="w-7 h-7 opacity-30" />
+                    Tidak ada data yang ditemukan.
                   </div>
                 </TableCell>
               </TableRow>
@@ -744,45 +698,35 @@ function HouseTable({
               data.map((h, i) => (
                 <TableRow
                   key={h.id}
-                  className={
-                    h.statusPerubahan === "berubah" ? "bg-destructive/[0.03]" : ""
-                  }
+                  className={h.statusPerubahan === "berubah" ? "bg-destructive/[0.025]" : ""}
                 >
-                  <TableCell className="text-center font-mono text-muted-foreground text-xs">
+                  <TableCell className="text-center font-mono text-[11px] text-muted-foreground">
                     {(page - 1) * 10 + i + 1}
                   </TableCell>
-                  <TableCell className="font-medium">{h.namaKepalaKeluarga}</TableCell>
-                  <TableCell
-                    className="max-w-[180px] truncate text-muted-foreground text-xs"
-                    title={h.alamat}
-                  >
+                  <TableCell className="font-medium text-sm">{h.namaKepalaKeluarga}</TableCell>
+                  <TableCell className="max-w-[160px] truncate text-xs text-muted-foreground" title={h.alamat}>
                     {h.alamat}
                   </TableCell>
-                  <TableCell className="font-mono text-xs">{h.rt}</TableCell>
-                  <TableCell className="font-mono text-xs">{h.rw}</TableCell>
+                  <TableCell className="font-mono text-xs whitespace-nowrap">
+                    {h.rt.replace("RT ", "")} / {h.rw.replace("RW ", "")}
+                  </TableCell>
                   <TableCell>
                     <Badge
                       variant={h.statusPerubahan === "berubah" ? "destructive" : "outline"}
-                      className="text-[10px]"
+                      className="text-[10px] whitespace-nowrap"
                     >
-                      {h.statusPerubahan === "berubah" ? "BERUBAH" : "TIDAK BERUBAH"}
+                      {h.statusPerubahan === "berubah" ? "Berubah" : "Tidak Berubah"}
                     </Badge>
                   </TableCell>
-                  <TableCell
-                    className="max-w-[150px] truncate text-xs"
-                    title={getJenisPerubahanList(h)}
-                  >
-                    {getJenisPerubahanList(h)}
+                  <TableCell className="max-w-[140px] truncate text-xs" title={getJenisLabel(h)}>
+                    {getJenisLabel(h)}
                   </TableCell>
                   <TableCell className="text-xs">{h.kondisiBangunan}</TableCell>
                   <TableCell>
                     <Badge
                       variant="outline"
                       className="font-mono text-[10px]"
-                      style={{
-                        color: klasterColor(h.klaster),
-                        borderColor: klasterColor(h.klaster),
-                      }}
+                      style={{ color: klasterColor(h.klaster), borderColor: klasterColor(h.klaster) }}
                     >
                       {h.klaster}
                     </Badge>
@@ -793,27 +737,14 @@ function HouseTable({
           </TableBody>
         </Table>
       </div>
-
       {totalPages > 1 && (
-        <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/20">
-          <div className="text-xs text-muted-foreground font-medium">
-            Halaman {page} dari {totalPages}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange(Math.max(1, page - 1))}
-              disabled={page === 1}
-            >
+        <div className="flex items-center justify-between px-4 py-2.5 border-t bg-muted/10">
+          <span className="text-xs text-muted-foreground">Hal. {page} / {totalPages}</span>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => onPageChange(Math.max(1, page - 1))} disabled={page === 1}>
               Sebelumnya
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange(Math.min(totalPages, page + 1))}
-              disabled={page === totalPages}
-            >
+            <Button variant="outline" size="sm" onClick={() => onPageChange(Math.min(totalPages, page + 1))} disabled={page === totalPages}>
               Selanjutnya
             </Button>
           </div>
@@ -827,26 +758,22 @@ function HouseTable({
 
 function DashboardSkeleton() {
   return (
-    <div className="container mx-auto px-4 py-8 space-y-10">
-      <div className="space-y-2">
-        <Skeleton className="h-10 w-48" />
-        <Skeleton className="h-4 w-72" />
+    <div className="container mx-auto px-4 py-8 space-y-8">
+      <div className="space-y-1.5">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-4 w-80" />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-32 w-full" />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="flex flex-col gap-4">
+          <Skeleton className="h-28" />
+          <Skeleton className="h-36 flex-1" />
+        </div>
+        <div className="lg:col-span-2 grid grid-cols-3 gap-3">
+          {Array(6).fill(0).map((_, i) => <Skeleton key={i} className="h-20" />)}
+        </div>
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-        {Array(7)
-          .fill(0)
-          .map((_, i) => (
-            <Skeleton key={i} className="h-20 w-full" />
-          ))}
-      </div>
-      <Skeleton className="h-[200px] w-full" />
-      <Skeleton className="h-[280px] w-full" />
-      <Skeleton className="h-[300px] w-full" />
+      <Skeleton className="h-[380px] rounded-lg" />
+      <Skeleton className="h-[480px] rounded-lg" />
     </div>
   );
 }

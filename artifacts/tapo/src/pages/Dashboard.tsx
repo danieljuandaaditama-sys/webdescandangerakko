@@ -10,6 +10,7 @@ import { Link } from "wouter";
 import {
   Home, Activity, CheckCircle2, ChevronLeft, ChevronRight,
   BarChart3, Info, Map, AlertCircle, ExternalLink,
+  Shield, Building2, Layers, SquareDashed,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -405,32 +406,84 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* Right: 2x3 grid of 6 change-type mini cards */}
-        <div className="lg:col-span-2 grid grid-cols-3 gap-3">
-          {validJenis.slice(0, 6).map((jenis, idx) => (
-            <Card key={idx} className="border shadow-sm">
-              <CardContent className="pt-4 pb-3 px-4">
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide leading-tight line-clamp-2">
-                  {jenis.label}
-                </p>
-                <p className="text-2xl font-bold font-mono mt-2 text-foreground">
-                  {jenis.jumlah}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
-          {/* If 7th change type exists */}
-          {validJenis.length === 7 && (
-            <Card className="border shadow-sm col-span-3">
-              <CardContent className="pt-3 pb-3 px-4 flex items-center justify-between">
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
-                  {validJenis[6].label}
-                </p>
-                <p className="text-2xl font-bold font-mono text-foreground">{validJenis[6].jumlah}</p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+        {/* Right: 4 highlighted stat cards */}
+        {(() => {
+          const countOf = (label: string) =>
+            validJenis.find((j) => j.label === label)?.jumlah ?? 0;
+          const total = (allHouses ?? []).length;
+          const pct = (n: number) =>
+            total > 0 ? `${((n / total) * 100).toFixed(0)}% rumah` : "—";
+
+          const CARDS = [
+            {
+              label: "Perubahan Pagar",
+              icon: Shield,
+              count: countOf("Perubahan Pagar"),
+              gradient: "from-blue-500 to-blue-600",
+              bg: "bg-blue-50 dark:bg-blue-950/30",
+              ring: "ring-blue-200 dark:ring-blue-800",
+              iconBg: "bg-blue-500",
+            },
+            {
+              label: "Perubahan Luas Bangunan",
+              icon: Building2,
+              count: countOf("Perubahan Luas Bangunan"),
+              gradient: "from-violet-500 to-violet-600",
+              bg: "bg-violet-50 dark:bg-violet-950/30",
+              ring: "ring-violet-200 dark:ring-violet-800",
+              iconBg: "bg-violet-500",
+            },
+            {
+              label: "Perubahan Luas Lahan",
+              icon: SquareDashed,
+              count: countOf("Perubahan Luas Lahan"),
+              gradient: "from-orange-500 to-orange-600",
+              bg: "bg-orange-50 dark:bg-orange-950/30",
+              ring: "ring-orange-200 dark:ring-orange-800",
+              iconBg: "bg-orange-500",
+            },
+            {
+              label: "Perubahan Jumlah Lantai",
+              icon: Layers,
+              count: countOf("Perubahan Jumlah Lantai"),
+              gradient: "from-emerald-500 to-emerald-600",
+              bg: "bg-emerald-50 dark:bg-emerald-950/30",
+              ring: "ring-emerald-200 dark:ring-emerald-800",
+              iconBg: "bg-emerald-500",
+            },
+          ] as const;
+
+          return (
+            <div className="lg:col-span-2 grid grid-cols-2 gap-3">
+              {CARDS.map((card) => {
+                const Icon = card.icon;
+                return (
+                  <Card
+                    key={card.label}
+                    className={`border-0 shadow-sm ring-1 ${card.ring} ${card.bg} overflow-hidden`}
+                  >
+                    <CardContent className="p-4 flex items-start gap-3">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${card.iconBg}`}>
+                        <Icon className="w-5 h-5 text-white" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground leading-tight line-clamp-2">
+                          {card.label}
+                        </p>
+                        <p className="text-3xl font-bold font-mono mt-1 text-foreground leading-none">
+                          {card.count}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          {pct(card.count)}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          );
+        })()}
       </div>
 
       {/* ── CONTENT TABS: Grafik | Tabel Seluruhnya | Tabel Perubahan ── */}

@@ -417,39 +417,39 @@ export default function Dashboard() {
           const CARDS = [
             {
               label: "Perubahan Pagar",
+              sublabel: "Rumah yg pagarnya berubah",
               icon: Shield,
               count: countOf("Perubahan Pagar"),
-              gradient: "from-blue-500 to-blue-600",
-              bg: "bg-blue-50 dark:bg-blue-950/30",
-              ring: "ring-blue-200 dark:ring-blue-800",
-              iconBg: "bg-blue-500",
+              from: "#3B82F6", to: "#1D4ED8",
+              light: "#EFF6FF",
+              iconColor: "#93C5FD",
             },
             {
               label: "Perubahan Luas Bangunan",
+              sublabel: "Perluasan/pengurangan bangunan",
               icon: Building2,
               count: countOf("Perubahan Luas Bangunan"),
-              gradient: "from-violet-500 to-violet-600",
-              bg: "bg-violet-50 dark:bg-violet-950/30",
-              ring: "ring-violet-200 dark:ring-violet-800",
-              iconBg: "bg-violet-500",
+              from: "#8B5CF6", to: "#6D28D9",
+              light: "#F5F3FF",
+              iconColor: "#C4B5FD",
             },
             {
               label: "Perubahan Luas Lahan",
+              sublabel: "Perubahan ukuran lahan",
               icon: SquareDashed,
               count: countOf("Perubahan Luas Lahan"),
-              gradient: "from-orange-500 to-orange-600",
-              bg: "bg-orange-50 dark:bg-orange-950/30",
-              ring: "ring-orange-200 dark:ring-orange-800",
-              iconBg: "bg-orange-500",
+              from: "#F97316", to: "#C2410C",
+              light: "#FFF7ED",
+              iconColor: "#FED7AA",
             },
             {
               label: "Perubahan Jumlah Lantai",
+              sublabel: "Penambahan tingkat bangunan",
               icon: Layers,
               count: countOf("Perubahan Jumlah Lantai"),
-              gradient: "from-emerald-500 to-emerald-600",
-              bg: "bg-emerald-50 dark:bg-emerald-950/30",
-              ring: "ring-emerald-200 dark:ring-emerald-800",
-              iconBg: "bg-emerald-500",
+              from: "#10B981", to: "#065F46",
+              light: "#ECFDF5",
+              iconColor: "#6EE7B7",
             },
           ] as const;
 
@@ -460,22 +460,40 @@ export default function Dashboard() {
                 return (
                   <Card
                     key={card.label}
-                    className={`border-0 shadow-sm ring-1 ${card.ring} ${card.bg} overflow-hidden`}
+                    className="border-0 shadow-md overflow-hidden"
+                    style={{ background: `linear-gradient(135deg, ${card.from} 0%, ${card.to} 100%)` }}
                   >
-                    <CardContent className="p-4 flex items-start gap-3">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${card.iconBg}`}>
+                    <CardContent className="p-5 relative overflow-hidden h-full min-h-[130px]">
+                      {/* Large decorative background icon */}
+                      <Icon
+                        className="absolute -bottom-3 -right-3 opacity-[0.15]"
+                        style={{ width: 110, height: 110, color: "white" }}
+                        strokeWidth={1}
+                      />
+                      {/* Small icon badge */}
+                      <div
+                        className="w-9 h-9 rounded-xl flex items-center justify-center mb-3"
+                        style={{ backgroundColor: "rgba(255,255,255,0.20)" }}
+                      >
                         <Icon className="w-5 h-5 text-white" />
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground leading-tight line-clamp-2">
-                          {card.label}
-                        </p>
-                        <p className="text-3xl font-bold font-mono mt-1 text-foreground leading-none">
-                          {card.count}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground mt-1">
+                      {/* Label */}
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-white/70 leading-tight">
+                        {card.label}
+                      </p>
+                      {/* Big number */}
+                      <p className="text-5xl font-black font-mono text-white leading-none mt-1">
+                        {card.count}
+                      </p>
+                      {/* Sub-info */}
+                      <div className="flex items-center gap-2 mt-2">
+                        <span
+                          className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                          style={{ backgroundColor: "rgba(255,255,255,0.20)", color: "white" }}
+                        >
                           {pct(card.count)}
-                        </p>
+                        </span>
+                        <span className="text-[10px] text-white/60">{card.sublabel}</span>
                       </div>
                     </CardContent>
                   </Card>

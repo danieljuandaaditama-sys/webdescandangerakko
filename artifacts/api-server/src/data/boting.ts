@@ -30,6 +30,7 @@ export interface House {
   jenisDinding: string | null;
   jumlahLantai: number | null;
   jenisAtap: string | null;
+  jenisPlafon: string | null;
   pagar: string | null;
   tahunDatang: number | null;
   keterangan: string | null;
@@ -52,7 +53,8 @@ function hitungKlaster(jumlah: number): "K1" | "K2" | "K3" {
 
 /** Helper builder */
 function house(
-  partial: Omit<House, "statusPerubahan" | "klaster" | "jumlahJenisPerubahan"> & {
+  partial: Omit<House, "statusPerubahan" | "klaster" | "jumlahJenisPerubahan" | "jenisPlafon"> & {
+    jenisPlafon?: string | null;
     perubahanPagar: boolean;
     perubahanLuasBangunan: boolean;
     perubahanJumlahLantai: boolean;
@@ -72,6 +74,7 @@ function house(
     partial.perubahanJenisAtap,
   ].filter(Boolean).length;
   return {
+    jenisPlafon: null,
     ...partial,
     jumlahJenisPerubahan: jumlah,
     statusPerubahan: jumlah > 0 ? "berubah" : "tidak_berubah",

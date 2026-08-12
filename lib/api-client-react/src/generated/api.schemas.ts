@@ -73,6 +73,11 @@ export interface House {
      */
   jenisAtap?: string | null;
   /**
+     * Triplek/Asbes/Bambu, Beton, PVC, Tidak Ada, dll.
+     * @nullable
+     */
+  jenisPlafon?: string | null;
+  /**
      * Ada (Tembok), Ada (Kayu), Tidak Ada
      * @nullable
      */

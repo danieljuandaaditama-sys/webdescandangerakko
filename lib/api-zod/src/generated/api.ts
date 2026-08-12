@@ -49,6 +49,7 @@ export const ListHousesResponseItem = zod.object({
   "jenisDinding": zod.string().nullish().describe('Tembok, Kayu, Bambu, Seng'),
   "jumlahLantai": zod.number().nullish(),
   "jenisAtap": zod.string().nullish().describe('Genteng, Seng, Asbes'),
+  "jenisPlafon": zod.string().nullish().describe('Triplek/Asbes/Bambu, Beton, PVC, Tidak Ada, dll.'),
   "pagar": zod.string().nullish().describe('Ada (Tembok), Ada (Kayu), Tidak Ada'),
   "tahunDatang": zod.number().nullish(),
   "keterangan": zod.string().nullish(),

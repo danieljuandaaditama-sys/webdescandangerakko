@@ -14,6 +14,7 @@ import {
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -74,6 +75,109 @@ function getJenisLabel(h: any): string {
   return list.length > 0 ? list.join(", ") : "—";
 }
 
+// ─── Map filter configs ──────────────────────────────────────────────────────
+
+const JENIS_LABEL: Record<string, string> = {
+  perubahanJenisLantai: "Perubahan Jenis Lantai",
+  perubahanJenisDinding: "Perubahan Jenis Dinding",
+  perubahanLuasBangunan: "Perubahan Luas Bangunan",
+  perubahanLuasLahan: "Perubahan Luas Lahan",
+  perubahanJenisAtap: "Perubahan Jenis Atap",
+  perubahanJumlahLantai: "Perubahan Jumlah Lantai",
+  perubahanPagar: "Perubahan Pagar",
+};
+
+const TAGGING_MODES: Record<string, {
+  label: string;
+  colorFn: (h: any) => string;
+  legend: { label: string; color: string }[];
+}> = {
+  luasBangunan: {
+    label: "Luas Bangunan",
+    colorFn: (h) => {
+      const v = h.luasBangunan;
+      if (!v) return "#9CA3AF";
+      if (v > 100) return "#EF4444";
+      if (v >= 50) return "#F59E0B";
+      return "#22C55E";
+    },
+    legend: [
+      { label: "> 100 m²", color: "#EF4444" },
+      { label: "50 – 100 m²", color: "#F59E0B" },
+      { label: "< 50 m²", color: "#22C55E" },
+    ],
+  },
+  luasLahan: {
+    label: "Luas Lahan",
+    colorFn: (h) => {
+      const v = h.luasLahan;
+      if (!v) return "#9CA3AF";
+      if (v > 100) return "#EF4444";
+      if (v >= 50) return "#F59E0B";
+      return "#22C55E";
+    },
+    legend: [
+      { label: "> 100 m²", color: "#EF4444" },
+      { label: "50 – 100 m²", color: "#F59E0B" },
+      { label: "< 50 m²", color: "#22C55E" },
+    ],
+  },
+  jumlahLantai: {
+    label: "Tingkatan Rumah",
+    colorFn: (h) => {
+      const v = h.jumlahLantai;
+      if (!v) return "#9CA3AF";
+      if (v === 1) return "#A78BFA";
+      if (v === 2) return "#7C3AED";
+      return "#4C1D95";
+    },
+    legend: [
+      { label: "Lantai 1", color: "#A78BFA" },
+      { label: "Lantai 2", color: "#7C3AED" },
+      { label: "Lantai 3+", color: "#4C1D95" },
+    ],
+  },
+  jenisDinding: {
+    label: "Jenis Dinding",
+    colorFn: (h) => dindingColor(h.jenisDinding),
+    legend: [
+      { label: "Tembok", color: "#64748B" },
+      { label: "Kayu", color: "#D97706" },
+      { label: "Bambu/Seng", color: "#84CC16" },
+    ],
+  },
+  jenisPlafon: {
+    label: "Jenis Plafon",
+    colorFn: (h) => {
+      const v: string | null | undefined = h.jenisPlafon;
+      if (!v) return "#9CA3AF";
+      const lv = v.toLowerCase();
+      if (lv.includes("triplek") || lv.includes("asbes") || lv.includes("bambu")) return "#3B82F6";
+      if (lv.includes("pvc")) return "#10B981";
+      if (lv.includes("beton") || lv.includes("plat")) return "#6B7280";
+      if (lv.includes("kayu") || lv.includes("akustik") || lv.includes("gypsum") || lv.includes("kalsibor")) return "#F59E0B";
+      return "#9CA3AF"; // Tidak ada / Terpal / etc
+    },
+    legend: [
+      { label: "Triplek/Asbes/Bambu", color: "#3B82F6" },
+      { label: "PVC", color: "#10B981" },
+      { label: "Beton/Plat", color: "#6B7280" },
+      { label: "Kayu/Gypsum/Kalsibor", color: "#F59E0B" },
+      { label: "Tidak Ada/Lainnya", color: "#9CA3AF" },
+    ],
+  },
+  jeniLantai: {
+    label: "Jenis Lantai",
+    colorFn: (h) => lantaiColor(h.jeniLantai),
+    legend: [
+      { label: "Keramik", color: "#3B82F6" },
+      { label: "Marmer/Granit", color: "#8B5CF6" },
+      { label: "Semen", color: "#F59E0B" },
+      { label: "Kayu/Papan", color: "#78716C" },
+    ],
+  },
+};
+
 // ─── Main ───────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
@@ -88,11 +192,13 @@ export default function Dashboard() {
   const [searchChanged, setSearchChanged] = useState("");
   const [pageAll, setPageAll] = useState(1);
   const [pageChanged, setPageChanged] = useState(1);
-  // Map sidebar filter
+  // Map tab & filters
   const [mapTab, setMapTab] = useState<"klaster" | "smart" | "tagging">("klaster");
   const [klasterFilter, setKlasterFilter] = useState<string | null>(null);
-  const [smartFilter, setSmartFilter] = useState<string | null>(null);
-  const [lantaiFilter, setLantaiFilter] = useState<string | null>(null);
+  // SMART MAP: which perubahan type to highlight
+  const [dashSmartJenis, setDashSmartJenis] = useState<string>("perubahanJenisLantai");
+  // Peta Tagging: which attribute to color by
+  const [taggingMode, setTaggingMode] = useState<string>("luasBangunan");
 
   const PER_PAGE = 10;
 
@@ -109,20 +215,40 @@ export default function Dashboard() {
         : allHouses ?? [],
     [allHouses, klasterFilter],
   );
-  const smartMapData = useMemo(
-    () =>
-      smartFilter
-        ? (allHouses ?? []).filter((h) => h.statusPerubahan === smartFilter)
-        : allHouses ?? [],
-    [allHouses, smartFilter],
+
+  // SMART MAP: per-RW breakdown for the selected jenis perubahan
+  const dashSmartPerRw = useMemo(() => {
+    const rwMap: Record<string, { berubah: number; total: number }> = {};
+    (allHouses ?? []).forEach((h) => {
+      if (!rwMap[h.rw]) rwMap[h.rw] = { berubah: 0, total: 0 };
+      rwMap[h.rw].total++;
+      if ((h as any)[dashSmartJenis]) rwMap[h.rw].berubah++;
+    });
+    return Object.entries(rwMap)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([rw, { berubah, total }]) => ({ rw, berubah, total }));
+  }, [allHouses, dashSmartJenis]);
+
+  const dashSmartTotal = useMemo(
+    () => (allHouses ?? []).filter((h) => (h as any)[dashSmartJenis]).length,
+    [allHouses, dashSmartJenis],
   );
-  const lantaiMapData = useMemo(
-    () =>
-      lantaiFilter
-        ? (allHouses ?? []).filter((h) => h.jeniLantai === lantaiFilter)
-        : allHouses ?? [],
-    [allHouses, lantaiFilter],
-  );
+
+  // Tagging: dynamic insight text
+  const taggingInsightText = useMemo(() => {
+    const total = (allHouses ?? []).length;
+    if (!total) return "";
+    if (taggingMode === "luasBangunan" || taggingMode === "luasLahan") {
+      const field = taggingMode as "luasBangunan" | "luasLahan";
+      const big = (allHouses ?? []).filter((h) => (h[field] ?? 0) > 100).length;
+      const med = (allHouses ?? []).filter((h) => { const v = h[field] ?? 0; return v >= 50 && v <= 100; }).length;
+      const small = (allHouses ?? []).filter((h) => { const v = h[field] ?? 0; return v > 0 && v < 50; }).length;
+      const lbl = taggingMode === "luasBangunan" ? "Luas Bangunan" : "Luas Lahan";
+      return `${lbl}: ${big} rumah >100m², ${med} rumah 50–100m², ${small} rumah <50m².`;
+    }
+    const mode = TAGGING_MODES[taggingMode];
+    return `Peta menampilkan distribusi ${mode?.label.toLowerCase() ?? taggingMode} dari ${total} rumah terdata.`;
+  }, [allHouses, taggingMode]);
 
   // Sorted bar chart data
   const barData = useMemo(
@@ -493,88 +619,93 @@ export default function Dashboard() {
 
           {/* SMART MAP */}
           <TabsContent value="smart" className="m-0">
+            {/* Filter bar */}
+            <div className="px-4 pt-3 pb-2.5 border-b bg-muted/20 flex items-center gap-3">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground whitespace-nowrap">
+                Filter
+              </label>
+              <Select value={dashSmartJenis} onValueChange={setDashSmartJenis}>
+                <SelectTrigger className="h-8 text-sm w-64 bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(JENIS_LABEL).map(([key, lbl]) => (
+                    <SelectItem key={key} value={key}>{lbl}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span className="text-xs text-muted-foreground">
+                <span className="font-mono font-semibold text-destructive">{dashSmartTotal}</span>
+                {" "}rumah terpengaruh
+              </span>
+            </div>
+
             <div className="flex flex-col lg:flex-row">
               <div className="flex-1 min-w-0">
                 <LeafletMapEngine
-                  data={smartMapData}
-                  height="420px"
-                  colorByField="statusPerubahan"
-                  colorMap={statusColor}
+                  data={allHouses ?? []}
+                  height="380px"
+                  colorByField={dashSmartJenis}
+                  colorMap={(v: boolean) => v ? "#EF4444" : "#9CA3AF"}
                   legend={[]}
                   popupContent={(h) => (
                     <div className="space-y-1">
-                      <div className="font-bold text-sm">{h.id}</div>
-                      <div className="text-xs">{h.namaKepalaKeluarga}</div>
-                      <div className="text-xs text-muted-foreground">{h.rt} · {h.rw}</div>
-                      <Badge variant={h.statusPerubahan === "berubah" ? "destructive" : "outline"} className="text-[10px]">
-                        {h.statusPerubahan === "berubah" ? "BERUBAH" : "TIDAK BERUBAH"}
+                      <div className="font-bold text-sm">{h.namaKepalaKeluarga}</div>
+                      <div className="text-xs text-muted-foreground">{h.id} · {h.rt} · {h.rw}</div>
+                      <Badge
+                        className="text-[10px]"
+                        style={{
+                          backgroundColor: (h as any)[dashSmartJenis] ? "#EF4444" : "#9CA3AF",
+                          color: "white",
+                        }}
+                      >
+                        {(h as any)[dashSmartJenis] ? JENIS_LABEL[dashSmartJenis] : "Tidak Ada Perubahan"}
                       </Badge>
-                      {h.statusPerubahan === "berubah" && (
-                        <div className="text-[10px] text-muted-foreground">{getJenisLabel(h)}</div>
-                      )}
                     </div>
                   )}
                 />
               </div>
-              {/* Sidebar Smart */}
-              <div className="lg:w-56 xl:w-64 border-t lg:border-t-0 lg:border-l p-4 flex flex-col gap-3">
-                {[
-                  { key: "berubah", label: "Berubah", color: "#EF4444", count: summary?.rumahBerubah ?? 0, desc: `${summary?.persenPerubahan.toFixed(1)}% dari total` },
-                  { key: "tidak_berubah", label: "Tidak Berubah", color: "#22C55E", count: summary?.rumahTidakBerubah ?? 0, desc: `${(100 - (summary?.persenPerubahan ?? 0)).toFixed(1)}% dari total` },
-                ].map((item) => {
-                  const isActive = smartFilter === item.key;
-                  return (
-                    <button
-                      key={item.key}
-                      onClick={() => setSmartFilter(isActive ? null : item.key)}
-                      className={[
-                        "flex items-start gap-2.5 rounded-lg p-3 text-left border transition-all duration-150 w-full",
-                        isActive
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-background border-border hover:border-muted-foreground/40",
-                      ].join(" ")}
-                    >
-                      <span className="w-2.5 h-2.5 rounded-full mt-0.5 shrink-0" style={{ backgroundColor: item.color }} />
-                      <div>
-                        <div className={["text-xs font-semibold", isActive ? "text-primary-foreground" : "text-foreground"].join(" ")}>
-                          {item.label}
+
+              {/* Sidebar Smart: per-RW breakdown */}
+              <div className="lg:w-60 xl:w-64 border-t lg:border-t-0 lg:border-l flex flex-col">
+                <div className="px-4 pt-3 pb-2 border-b">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    {JENIS_LABEL[dashSmartJenis]} Per RW
+                  </p>
+                </div>
+                <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+                  {dashSmartPerRw.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-4">Tidak ada data</p>
+                  ) : (
+                    dashSmartPerRw.map(({ rw, berubah, total }) => (
+                      <div key={rw} className="space-y-0.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-semibold text-foreground">{rw}</span>
+                          <span className="font-mono font-bold text-destructive">{berubah}</span>
                         </div>
-                        <div className={["text-[10px] mt-0.5", isActive ? "text-primary-foreground/70" : "text-muted-foreground"].join(" ")}>
-                          {item.desc}
+                        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className="h-full bg-destructive rounded-full transition-all"
+                            style={{ width: total > 0 ? `${(berubah / total) * 100}%` : "0%" }}
+                          />
+                        </div>
+                        <div className="text-[10px] text-muted-foreground text-right">
+                          {total > 0 ? ((berubah / total) * 100).toFixed(0) : 0}% dari {total}
                         </div>
                       </div>
-                      <span className={["ml-auto font-mono text-sm font-bold", isActive ? "text-primary-foreground" : "text-foreground"].join(" ")}>
-                        {item.count}
-                      </span>
-                    </button>
-                  );
-                })}
-
-                <div className="mt-2 pt-3 border-t">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
-                    Informasi Distribusi
-                  </p>
-                  {smartFilter ? (
-                    <p className="text-xs text-foreground leading-relaxed">
-                      {smartFilter === "berubah"
-                        ? `${summary?.rumahBerubah} rumah mengalami setidaknya 1 jenis perubahan fisik.`
-                        : `${summary?.rumahTidakBerubah} rumah tidak mengalami perubahan yang terdeteksi.`}
-                    </p>
-                  ) : (
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      Klik status di atas untuk memfilter tampilan peta.
-                    </p>
-                  )}
-                  {smartFilter && (
-                    <button onClick={() => setSmartFilter(null)} className="text-[10px] text-primary underline mt-2">
-                      Tampilkan semua
-                    </button>
+                    ))
                   )}
                 </div>
-
-                <div className="pt-3 border-t">
-                  <Link href="/smart-map" className="text-xs text-primary font-semibold flex items-center gap-1 hover:underline">
-                    Smart Map lengkap dengan filter <ExternalLink className="w-3 h-3" />
+                <div className="border-t px-4 py-3 space-y-2">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-1">Smart Insight</p>
+                  <p className="text-xs text-foreground leading-relaxed">
+                    {dashSmartTotal} dari {(allHouses ?? []).length} rumah (
+                    {(allHouses ?? []).length > 0
+                      ? ((dashSmartTotal / (allHouses ?? []).length) * 100).toFixed(1)
+                      : 0}%) mengalami {JENIS_LABEL[dashSmartJenis]?.toLowerCase()}.
+                  </p>
+                  <Link href="/smart-map" className="text-[10px] text-primary font-semibold flex items-center gap-1 hover:underline">
+                    Buka Smart Map lengkap <ExternalLink className="w-3 h-3" />
                   </Link>
                 </div>
               </div>
@@ -583,73 +714,81 @@ export default function Dashboard() {
 
           {/* PETA TAGGING LOCATION */}
           <TabsContent value="tagging" className="m-0">
+            {/* Filter warna marker bar */}
+            <div className="px-4 pt-3 pb-2.5 border-b bg-muted/20 flex items-center gap-3">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground whitespace-nowrap">
+                Filter Warna Marker
+              </label>
+              <Select value={taggingMode} onValueChange={setTaggingMode}>
+                <SelectTrigger className="h-8 text-sm w-56 bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="luasBangunan">Luas Bangunan</SelectItem>
+                  <SelectItem value="luasLahan">Luas Lahan</SelectItem>
+                  <SelectItem value="jumlahLantai">Tingkatan Rumah</SelectItem>
+                  <SelectItem value="jenisDinding">Jenis Dinding</SelectItem>
+                  <SelectItem value="jenisPlafon">Jenis Plafon</SelectItem>
+                  <SelectItem value="jeniLantai">Jenis Lantai</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="flex flex-col lg:flex-row">
               <div className="flex-1 min-w-0">
                 <LeafletMapEngine
-                  data={lantaiMapData}
-                  height="420px"
-                  colorByField="jeniLantai"
-                  colorMap={lantaiColor}
+                  data={allHouses ?? []}
+                  height="380px"
+                  colorMap={(h: any) => TAGGING_MODES[taggingMode]?.colorFn(h) ?? "#9CA3AF"}
                   legend={[]}
-                  popupContent={(h) => (
-                    <div className="space-y-1">
-                      <div className="font-bold text-sm">{h.id}</div>
-                      <div className="text-xs">{h.namaKepalaKeluarga}</div>
-                      <div className="text-xs text-muted-foreground">{h.rt} · {h.rw}</div>
-                      <div className="text-[10px] font-semibold rounded px-1.5 py-0.5 text-white inline-block mt-1"
-                        style={{ backgroundColor: lantaiColor(h.jeniLantai) }}>
-                        Lantai: {h.jeniLantai ?? "—"}
+                  popupContent={(h) => {
+                    const color = TAGGING_MODES[taggingMode]?.colorFn(h) ?? "#9CA3AF";
+                    const val = (() => {
+                      if (taggingMode === "luasBangunan") return `${h.luasBangunan ?? "—"} m²`;
+                      if (taggingMode === "luasLahan") return `${h.luasLahan ?? "—"} m²`;
+                      if (taggingMode === "jumlahLantai") return `${h.jumlahLantai ?? "—"} Lantai`;
+                      if (taggingMode === "jenisDinding") return h.jenisDinding ?? "—";
+                      if (taggingMode === "jenisPlafon") return (h as any).jenisPlafon ?? "—";
+                      if (taggingMode === "jeniLantai") return h.jeniLantai ?? "—";
+                      return "—";
+                    })();
+                    return (
+                      <div className="space-y-1">
+                        <div className="font-bold text-sm">{h.namaKepalaKeluarga}</div>
+                        <div className="text-xs text-muted-foreground">{h.id} · {h.rt} · {h.rw}</div>
+                        <div
+                          className="text-[10px] font-semibold rounded px-1.5 py-0.5 text-white inline-block mt-1"
+                          style={{ backgroundColor: color }}
+                        >
+                          {TAGGING_MODES[taggingMode]?.label}: {val}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  }}
                 />
               </div>
-              {/* Sidebar Tagging */}
-              <div className="lg:w-56 xl:w-64 border-t lg:border-t-0 lg:border-l p-4 flex flex-col gap-3">
-                {(summary?.byJenisLantai ?? []).map((item) => {
-                  const isActive = lantaiFilter === item.label;
-                  const color = lantaiColor(item.label);
-                  return (
-                    <button
-                      key={item.label}
-                      onClick={() => setLantaiFilter(isActive ? null : item.label)}
-                      className={[
-                        "flex items-start gap-2.5 rounded-lg p-3 text-left border transition-all duration-150 w-full",
-                        isActive
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-background border-border hover:border-muted-foreground/40",
-                      ].join(" ")}
-                    >
-                      <span className="w-2.5 h-2.5 rounded-full mt-0.5 shrink-0" style={{ backgroundColor: color }} />
-                      <div className={["text-xs font-semibold", isActive ? "text-primary-foreground" : "text-foreground"].join(" ")}>
-                        {item.label}
-                      </div>
-                      <span className={["ml-auto font-mono text-sm font-bold", isActive ? "text-primary-foreground" : "text-foreground"].join(" ")}>
-                        {item.jumlah}
-                      </span>
-                    </button>
-                  );
-                })}
 
-                <div className="mt-2 pt-3 border-t">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
-                    Informasi Tagging
+              {/* Sidebar Tagging: legend + insight */}
+              <div className="lg:w-60 xl:w-64 border-t lg:border-t-0 lg:border-l flex flex-col">
+                <div className="px-4 pt-3 pb-2 border-b">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Legenda</p>
+                </div>
+                <div className="flex-1 px-4 py-3 space-y-2.5">
+                  {(TAGGING_MODES[taggingMode]?.legend ?? []).map((item) => (
+                    <div key={item.label} className="flex items-center gap-2.5">
+                      <span
+                        className="w-3 h-3 rounded-full shrink-0"
+                        style={{ backgroundColor: item.color }}
+                      />
+                      <span className="text-xs text-foreground">{item.label}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="border-t px-4 py-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-1.5">
+                    Smart Insight Per Filter
                   </p>
-                  {lantaiFilter ? (
-                    <p className="text-xs text-foreground leading-relaxed">
-                      {(summary?.byJenisLantai ?? []).find((j) => j.label === lantaiFilter)?.jumlah ?? 0} rumah
-                      menggunakan lantai jenis <strong>{lantaiFilter}</strong>.
-                    </p>
-                  ) : (
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      Klik jenis lantai di atas untuk memfilter tampilan peta.
-                    </p>
-                  )}
-                  {lantaiFilter && (
-                    <button onClick={() => setLantaiFilter(null)} className="text-[10px] text-primary underline mt-2">
-                      Tampilkan semua
-                    </button>
-                  )}
+                  <p className="text-xs text-foreground leading-relaxed">{taggingInsightText}</p>
                 </div>
               </div>
             </div>

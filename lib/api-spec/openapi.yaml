@@ -269,6 +269,9 @@ components:
         jenisAtap:
           type: ["string", "null"]
           description: "Genteng, Seng, Asbes"
+        jenisPlafon:
+          type: ["string", "null"]
+          description: "Triplek/Asbes/Bambu, Beton, PVC, Tidak Ada, dll."
         pagar:
           type: ["string", "null"]
           description: "Ada (Tembok), Ada (Kayu), Tidak Ada"

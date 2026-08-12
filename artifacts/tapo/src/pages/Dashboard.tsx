@@ -336,25 +336,37 @@ export default function Dashboard() {
 
         {/* Left column: Big stat + Smart Insight */}
         <div className="flex flex-col gap-4">
-          {/* X / Y stat */}
-          <Card className="border shadow-sm">
-            <CardContent className="pt-5 pb-4 px-5">
-              <div className="text-4xl font-bold tracking-tight font-mono">
-                <span className="text-foreground">{summary?.rumahBerubah}</span>
-                <span className="text-muted-foreground/50 mx-1.5">/</span>
-                <span className="text-muted-foreground">{summary?.totalRumah}</span>
+          {/* X / Y stat — gradient card */}
+          <div
+            className="rounded-2xl p-6 shadow-lg relative overflow-hidden"
+            style={{ background: "linear-gradient(135deg, #3B6EF8 0%, #2952D9 60%, #1E3FB8 100%)" }}
+          >
+            {/* Decorative circles */}
+            <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full opacity-10" style={{ background: "white" }} />
+            <div className="absolute -bottom-8 -left-4 w-24 h-24 rounded-full opacity-10" style={{ background: "white" }} />
+
+            <div className="relative">
+              <div className="flex items-baseline gap-2">
+                <span className="text-6xl font-black text-white leading-none tracking-tight">
+                  {summary?.rumahBerubah ?? "—"}
+                </span>
+                <span className="text-2xl font-medium text-white/50 leading-none">
+                  /{summary?.totalRumah ?? "—"}
+                </span>
               </div>
-              <p className="text-sm text-muted-foreground mt-1.5">rumah mengalami perubahan</p>
-              <div className="flex gap-2 mt-3">
-                <Badge variant="destructive" className="font-mono text-xs">
+              <p className="text-base font-bold text-white mt-2">
+                Rumah Mengalami Perubahan
+              </p>
+              <div className="flex gap-2 mt-4">
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-full text-white" style={{ backgroundColor: "rgba(255,255,255,0.18)" }}>
                   {summary?.persenPerubahan.toFixed(1)}% berubah
-                </Badge>
-                <Badge variant="outline" className="font-mono text-xs text-emerald-600 border-emerald-400">
+                </span>
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ backgroundColor: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.75)" }}>
                   {(100 - (summary?.persenPerubahan ?? 0)).toFixed(1)}% stabil
-                </Badge>
+                </span>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Smart Insight carousel */}
           <Card className="border shadow-sm flex-1">

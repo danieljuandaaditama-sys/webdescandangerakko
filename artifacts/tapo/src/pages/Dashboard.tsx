@@ -23,8 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  BarChart, Bar, Cell, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, LabelList,
+  PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
 
 import { LeafletMapEngine } from "@/components/map/LeafletMapEngine";
@@ -457,43 +456,81 @@ export default function Dashboard() {
 
           {/* Grafik Perubahan */}
           <TabsContent value="grafik" className="m-0 p-5">
-            <h3 className="text-sm font-semibold mb-4">Perubahan paling dominan</h3>
+            <h3 className="text-sm font-semibold mb-1">Perubahan paling dominan</h3>
+            <p className="text-xs text-muted-foreground mb-4">
+              Distribusi jenis perubahan yang terdeteksi pada rumah-rumah di Kelurahan Boting
+            </p>
             {barData.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">Tidak ada data perubahan.</p>
             ) : (
-              <ResponsiveContainer width="100%" height={barData.length * 44 + 20}>
-                <BarChart
-                  layout="vertical"
-                  data={barData}
-                  margin={{ top: 0, right: 60, bottom: 0, left: 10 }}
-                  barSize={20}
-                >
-                  <XAxis type="number" hide />
-                  <YAxis
-                    type="category"
-                    dataKey="label"
-                    width={160}
-                    tick={{ fontSize: 12, fill: "var(--color-muted-foreground)" }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <Tooltip
-                    cursor={{ fill: "var(--color-muted)", opacity: 0.4 }}
-                    formatter={(v: number) => [`${v} rumah`, "Jumlah"]}
-                    contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid var(--color-border)" }}
-                  />
-                  <Bar dataKey="jumlah" radius={[0, 4, 4, 0]}>
-                    {barData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                    <LabelList
-                      dataKey="jumlah"
-                      position="right"
-                      style={{ fontSize: 12, fontWeight: 600, fontFamily: "monospace" }}
-                    />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="flex flex-col lg:flex-row items-center gap-6">
+                {/* Donut chart */}
+                <div className="w-full lg:w-64 shrink-0">
+                  <ResponsiveContainer width="100%" height={240}>
+                    <PieChart>
+                      <Pie
+                        data={barData}
+                        dataKey="jumlah"
+                        nameKey="label"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={100}
+                        paddingAngle={2}
+                      >
+                        {barData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(v: number) => [`${v} rumah`, "Jumlah"]}
+                        contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid var(--color-border)" }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  {/* Total di tengah - overlay text */}
+                  <p className="text-center -mt-4 text-xs text-muted-foreground">
+                    Total:{" "}
+                    <span className="font-bold text-foreground">
+                      {barData.reduce((s, d) => s + d.jumlah, 0)}
+                    </span>{" "}
+                    perubahan
+                  </p>
+                </div>
+
+                {/* Keterangan / legend */}
+                <div className="flex-1 w-full space-y-2">
+                  {barData.map((entry) => {
+                    const total = barData.reduce((s, d) => s + d.jumlah, 0);
+                    const pct = total > 0 ? ((entry.jumlah / total) * 100).toFixed(1) : "0";
+                    return (
+                      <div key={entry.label} className="flex items-center gap-3">
+                        <span
+                          className="w-3 h-3 rounded-full shrink-0"
+                          style={{ backgroundColor: entry.fill }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between text-xs mb-0.5">
+                            <span className="font-medium text-foreground truncate">{entry.label}</span>
+                            <span className="font-mono font-bold ml-2 shrink-0">
+                              {entry.jumlah} <span className="text-muted-foreground font-normal">({pct}%)</span>
+                            </span>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all"
+                              style={{
+                                width: `${pct}%`,
+                                backgroundColor: entry.fill,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             )}
           </TabsContent>
 

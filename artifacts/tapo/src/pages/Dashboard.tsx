@@ -91,6 +91,9 @@ const TAGGING_MODES: Record<string, {
   label: string;
   colorFn: (h: any) => string;
   legend: { label: string; color: string }[];
+  /** Sorotan yang dihitung per-RW (true = masuk hitungan) */
+  highlightFn: (h: any) => boolean;
+  highlightLabel: string;
 }> = {
   luasBangunan: {
     label: "Luas Bangunan",
@@ -106,6 +109,8 @@ const TAGGING_MODES: Record<string, {
       { label: "50 – 100 m²", color: "#F59E0B" },
       { label: "< 50 m²", color: "#22C55E" },
     ],
+    highlightFn: (h) => (h.luasBangunan ?? 0) > 100,
+    highlightLabel: "> 100 m²",
   },
   luasLahan: {
     label: "Luas Lahan",
@@ -121,6 +126,8 @@ const TAGGING_MODES: Record<string, {
       { label: "50 – 100 m²", color: "#F59E0B" },
       { label: "< 50 m²", color: "#22C55E" },
     ],
+    highlightFn: (h) => (h.luasLahan ?? 0) > 100,
+    highlightLabel: "> 100 m²",
   },
   jumlahLantai: {
     label: "Tingkatan Rumah",
@@ -136,6 +143,8 @@ const TAGGING_MODES: Record<string, {
       { label: "Lantai 2", color: "#7C3AED" },
       { label: "Lantai 3+", color: "#4C1D95" },
     ],
+    highlightFn: (h) => (h.jumlahLantai ?? 0) >= 2,
+    highlightLabel: "≥ 2 Lantai",
   },
   jenisDinding: {
     label: "Jenis Dinding",
@@ -145,6 +154,8 @@ const TAGGING_MODES: Record<string, {
       { label: "Kayu", color: "#D97706" },
       { label: "Bambu/Seng", color: "#84CC16" },
     ],
+    highlightFn: (h) => (h.jenisDinding ?? "").toLowerCase().includes("tembok"),
+    highlightLabel: "Tembok",
   },
   jenisPlafon: {
     label: "Jenis Plafon",
@@ -156,7 +167,7 @@ const TAGGING_MODES: Record<string, {
       if (lv.includes("pvc")) return "#10B981";
       if (lv.includes("beton") || lv.includes("plat")) return "#6B7280";
       if (lv.includes("kayu") || lv.includes("akustik") || lv.includes("gypsum") || lv.includes("kalsibor")) return "#F59E0B";
-      return "#9CA3AF"; // Tidak ada / Terpal / etc
+      return "#9CA3AF";
     },
     legend: [
       { label: "Triplek/Asbes/Bambu", color: "#3B82F6" },
@@ -165,6 +176,11 @@ const TAGGING_MODES: Record<string, {
       { label: "Kayu/Gypsum/Kalsibor", color: "#F59E0B" },
       { label: "Tidak Ada/Lainnya", color: "#9CA3AF" },
     ],
+    highlightFn: (h) => {
+      const v: string = (h.jenisPlafon ?? "").toLowerCase();
+      return v.includes("triplek") || v.includes("asbes") || v.includes("bambu");
+    },
+    highlightLabel: "Triplek/Asbes/Bambu",
   },
   jeniLantai: {
     label: "Jenis Lantai",
@@ -175,6 +191,8 @@ const TAGGING_MODES: Record<string, {
       { label: "Semen", color: "#F59E0B" },
       { label: "Kayu/Papan", color: "#78716C" },
     ],
+    highlightFn: (h) => (h.jeniLantai ?? "").toLowerCase() === "keramik",
+    highlightLabel: "Keramik",
   },
 };
 
@@ -233,6 +251,21 @@ export default function Dashboard() {
     () => (allHouses ?? []).filter((h) => (h as any)[dashSmartJenis]).length,
     [allHouses, dashSmartJenis],
   );
+
+  // Tagging: per-RW breakdown (highlight category per mode)
+  const taggingPerRw = useMemo(() => {
+    const mode = TAGGING_MODES[taggingMode];
+    if (!mode) return [];
+    const rwMap: Record<string, { highlight: number; total: number }> = {};
+    (allHouses ?? []).forEach((h) => {
+      if (!rwMap[h.rw]) rwMap[h.rw] = { highlight: 0, total: 0 };
+      rwMap[h.rw].total++;
+      if (mode.highlightFn(h)) rwMap[h.rw].highlight++;
+    });
+    return Object.entries(rwMap)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([rw, { highlight, total }]) => ({ rw, highlight, total }));
+  }, [allHouses, taggingMode]);
 
   // Tagging: dynamic insight text
   const taggingInsightText = useMemo(() => {
@@ -768,23 +801,56 @@ export default function Dashboard() {
                 />
               </div>
 
-              {/* Sidebar Tagging: legend + insight */}
+              {/* Sidebar Tagging: per-RW + legend + insight */}
               <div className="lg:w-60 xl:w-64 border-t lg:border-t-0 lg:border-l flex flex-col">
+                {/* Per-RW breakdown */}
                 <div className="px-4 pt-3 pb-2 border-b">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Legenda</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    {TAGGING_MODES[taggingMode]?.label} Per RW
+                  </p>
+                  <p className="text-[9px] text-muted-foreground/70 mt-0.5">
+                    Sorotan: {TAGGING_MODES[taggingMode]?.highlightLabel}
+                  </p>
                 </div>
-                <div className="flex-1 px-4 py-3 space-y-2.5">
-                  {(TAGGING_MODES[taggingMode]?.legend ?? []).map((item) => (
-                    <div key={item.label} className="flex items-center gap-2.5">
-                      <span
-                        className="w-3 h-3 rounded-full shrink-0"
-                        style={{ backgroundColor: item.color }}
-                      />
-                      <span className="text-xs text-foreground">{item.label}</span>
-                    </div>
-                  ))}
+                <div className="overflow-y-auto px-4 py-3 space-y-2.5 max-h-44">
+                  {taggingPerRw.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-2">Tidak ada data</p>
+                  ) : (
+                    taggingPerRw.map(({ rw, highlight, total }) => (
+                      <div key={rw} className="space-y-0.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-semibold text-foreground">{rw}</span>
+                          <span className="font-mono font-bold text-primary">{highlight}</span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className="h-full bg-primary rounded-full transition-all"
+                            style={{ width: total > 0 ? `${(highlight / total) * 100}%` : "0%" }}
+                          />
+                        </div>
+                        <div className="text-[10px] text-muted-foreground text-right">
+                          {total > 0 ? ((highlight / total) * 100).toFixed(0) : 0}% dari {total}
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
-                <div className="border-t px-4 py-3">
+
+                {/* Legenda */}
+                <div className="border-t px-4 pt-3 pb-2">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Legenda</p>
+                  <div className="space-y-1.5">
+                    {(TAGGING_MODES[taggingMode]?.legend ?? []).map((item) => (
+                      <div key={item.label} className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                        <span className="text-[11px] text-foreground">{item.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Smart Insight */}
+                <div className="border-t px-4 py-3 mt-auto">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-1.5">
                     Smart Insight Per Filter
                   </p>

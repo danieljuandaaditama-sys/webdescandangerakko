@@ -325,9 +325,12 @@ export default function Dashboard() {
 
       {/* ── Page Header ──────────────────────────────────────────────── */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard Perubahan Rumah</h1>
+        <h1 className="text-2xl font-bold tracking-tight">
+          Dashboard WebGIS{" "}
+          <span className="text-primary">Desa Cantik</span>
+        </h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Ringkasan perubahan bangunan berdasarkan data tahun 2024
+          Ringkasan perubahan bangunan Kelurahan Boting tahun 2026
         </p>
       </div>
 

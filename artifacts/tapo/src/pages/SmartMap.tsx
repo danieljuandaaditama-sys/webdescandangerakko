@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
-import { useListHouses, useGetHousingInsight, type ListHousesParams } from "@workspace/api-client-react";
-import { Map as MapIcon, Info, Search, Check, X, Building2 } from "lucide-react";
+import { useListHouses, type ListHousesParams } from "@workspace/api-client-react";
+import { Map as MapIcon, Info, Search, Check, X, Building2, Filter } from "lucide-react";
 
 import { LeafletMapEngine } from "@/components/map/LeafletMapEngine";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,8 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 
-// ─── Color helpers (same as Dashboard) ──────────────────────────────────────
+// ─── Color helpers ────────────────────────────────────────────────────────────
 
 function klasterColor(v: string) {
   if (v === "K1") return "#22C55E";
@@ -38,16 +39,17 @@ function lantaiColor(v: string | null | undefined) {
   return "#78716C";
 }
 
-// ─── Filter/Mode configs ─────────────────────────────────────────────────────
+// ─── Config ───────────────────────────────────────────────────────────────────
 
 type Tampilan = "klaster" | "smartmap" | "tagging";
 
-const JENIS_LABEL: Record<string, string> = {
-  perubahanPagar: "Perubahan Pagar",
-  perubahanLuasBangunan: "Perubahan Luas Bangunan",
-  perubahanLuasLahan: "Perubahan Luas Lahan",
-  perubahanJumlahLantai: "Perubahan Jumlah Lantai",
-};
+/** 4 jenis perubahan yang relevan untuk SMART MAP */
+const SMART_JENIS: { key: string; label: string; color: string }[] = [
+  { key: "perubahanPagar",        label: "Perubahan Pagar",        color: "#EF4444" },
+  { key: "perubahanLuasBangunan", label: "Perubahan Luas Bangunan", color: "#F59E0B" },
+  { key: "perubahanLuasLahan",    label: "Perubahan Luas Lahan",    color: "#8B5CF6" },
+  { key: "perubahanJumlahLantai", label: "Perubahan Jumlah Lantai", color: "#06B6D4" },
+];
 
 const TAGGING_MODES: Record<string, {
   label: string;
@@ -74,14 +76,14 @@ const TAGGING_MODES: Record<string, {
     colorFn: (h) => {
       const v = h.luasLahan;
       if (!v) return "#9CA3AF";
-      if (v > 100) return "#EF4444";
-      if (v >= 50) return "#F59E0B";
+      if (v > 200) return "#EF4444";
+      if (v >= 100) return "#F59E0B";
       return "#22C55E";
     },
     legend: [
-      { label: "> 100 m²", color: "#EF4444" },
-      { label: "50 – 100 m²", color: "#F59E0B" },
-      { label: "< 50 m²", color: "#22C55E" },
+      { label: "> 200 m²", color: "#EF4444" },
+      { label: "100 – 200 m²", color: "#F59E0B" },
+      { label: "< 100 m²", color: "#22C55E" },
     ],
   },
   jumlahLantai: {
@@ -138,35 +140,53 @@ const TAGGING_MODES: Record<string, {
   },
 };
 
+// Real RT/RW values from survey data
+const RT_OPTIONS = ["1", "2", "3", "4", "5"];
+const RW_OPTIONS = ["1", "2", "3", "4", "5", "6", "7", "8"];
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function SmartMap() {
   const [tampilan, setTampilan] = useState<Tampilan>("smartmap");
 
-  // Filter states — each tampilan uses its own
+  // SMART MAP: multi-select — array of selected jenis keys
+  const [smartJenisList, setSmartJenisList] = useState<string[]>(["perubahanPagar"]);
+  // Klaster filter
   const [klasterFilter, setKlasterFilter] = useState<string>("all");
-  const [smartJenis, setSmartJenis] = useState<string>("perubahanPagar");
+  // Tagging mode
   const [taggingMode, setTaggingMode] = useState<string>("luasBangunan");
 
-  // Global filters (apply to all tampilan)
+  // Global filters
   const [filterRT, setFilterRT] = useState<string>("all");
   const [filterRW, setFilterRW] = useState<string>("all");
   const [search, setSearch] = useState("");
 
-  // Build API query params
-  const queryParams: ListHousesParams = {};
-  if (filterRT !== "all") queryParams.rt = filterRT;
-  if (filterRW !== "all") queryParams.rw = filterRW;
-  if (tampilan === "klaster" && klasterFilter !== "all") queryParams.klaster = klasterFilter as any;
+  // Toggle a jenis key in/out of smartJenisList
+  function toggleJenis(key: string) {
+    setSmartJenisList((prev) => {
+      if (prev.includes(key)) {
+        // Don't allow deselecting all — keep at least 1
+        if (prev.length === 1) return prev;
+        return prev.filter((k) => k !== key);
+      }
+      return [...prev, key];
+    });
+  }
+
+  // Build API query params (RT/RW use real values: "1", "2", etc.)
+  const queryParams: ListHousesParams = useMemo(() => {
+    const p: ListHousesParams = {};
+    if (filterRT !== "all") p.rt = filterRT;
+    if (filterRW !== "all") p.rw = filterRW;
+    if (tampilan === "klaster" && klasterFilter !== "all") p.klaster = klasterFilter as any;
+    return p;
+  }, [filterRT, filterRW, tampilan, klasterFilter]);
 
   const { data: houses, isLoading: isHousesLoading } = useListHouses(queryParams, {
     query: { queryKey: ["smartmap", "houses", queryParams] },
   });
 
-  const { data: insight, isLoading: isInsightLoading } = useGetHousingInsight(queryParams, {
-    query: { queryKey: ["smartmap", "insight", queryParams] },
-  });
-
+  // Client-side text search
   const filteredHouses = useMemo(() => {
     if (!houses) return [];
     if (!search) return houses;
@@ -178,11 +198,12 @@ export default function SmartMap() {
     );
   }, [houses, search]);
 
-  // Active color function and legend based on tampilan
+  // ── Color logic per tampilan ─────────────────────────────────────────────
+
   const { colorFn, colorByField, legend } = useMemo(() => {
     if (tampilan === "klaster") {
       return {
-        colorByField: "klaster",
+        colorByField: "klaster" as string | undefined,
         colorFn: (v: string) => klasterColor(v),
         legend: [
           { label: "K1 — Tidak ada perubahan", color: "#22C55E" },
@@ -191,26 +212,124 @@ export default function SmartMap() {
         ],
       };
     }
+
     if (tampilan === "smartmap") {
+      // Multi-select: house is red if ANY selected jenis is true
+      const selectedConfigs = SMART_JENIS.filter((j) => smartJenisList.includes(j.key));
+      const singleColor = selectedConfigs.length === 1 ? selectedConfigs[0].color : "#EF4444";
+
       return {
-        colorByField: smartJenis,
-        colorFn: (v: boolean) => (v ? "#EF4444" : "#9CA3AF"),
+        colorByField: undefined as string | undefined,
+        colorFn: (h: any) => {
+          const matches = smartJenisList.some((k) => h[k] === true);
+          return matches ? singleColor : "#9CA3AF";
+        },
         legend: [
-          { label: JENIS_LABEL[smartJenis] ?? smartJenis, color: "#EF4444" },
+          ...selectedConfigs.map((c) => ({ label: c.label, color: singleColor })),
           { label: "Tidak Ada Perubahan", color: "#9CA3AF" },
-        ],
+        ].filter((item, idx, arr) =>
+          // dedup label
+          arr.findIndex((x) => x.label === item.label) === idx
+        ),
       };
     }
+
     // tagging
     const mode = TAGGING_MODES[taggingMode];
     return {
-      colorByField: undefined,
+      colorByField: undefined as string | undefined,
       colorFn: (h: any) => mode?.colorFn(h) ?? "#9CA3AF",
       legend: mode?.legend ?? [],
     };
-  }, [tampilan, klasterFilter, smartJenis, taggingMode]);
+  }, [tampilan, klasterFilter, smartJenisList, taggingMode]);
 
-  const tampilanLabel = tampilan === "klaster" ? "Peta Klasterisasi" : tampilan === "smartmap" ? "SMART MAP" : "Peta Tagging Location";
+  // ── Dynamic Insight (client-side) ────────────────────────────────────────
+
+  const insight = useMemo(() => {
+    const total = filteredHouses.length;
+    if (total === 0) return null;
+
+    const rtLabel = filterRT !== "all" ? `RT ${filterRT}` : null;
+    const rwLabel = filterRW !== "all" ? `RW ${filterRW}` : null;
+    const lokasiLabel = rtLabel ?? rwLabel ?? "seluruh Kelurahan Boting";
+
+    if (tampilan === "klaster") {
+      const k1 = filteredHouses.filter((h) => h.klaster === "K1").length;
+      const k2 = filteredHouses.filter((h) => h.klaster === "K2").length;
+      const k3 = filteredHouses.filter((h) => h.klaster === "K3").length;
+      const berubah = filteredHouses.filter((h) => h.statusPerubahan === "berubah").length;
+      const persen = total > 0 ? Math.round((berubah / total) * 100) : 0;
+      return {
+        ringkasan: `Di ${lokasiLabel}, terdapat ${total} rumah terdata. ${berubah} rumah (${persen}%) mengalami perubahan.`,
+        poin: [
+          `K1 (tidak ada perubahan): ${k1} rumah (${Math.round((k1/total)*100)}%).`,
+          `K2 (perubahan sedang, 1–2 jenis): ${k2} rumah (${Math.round((k2/total)*100)}%).`,
+          `K3 (perubahan signifikan, ≥3 jenis): ${k3} rumah${k3 > 0 ? " — perlu perhatian khusus" : ""}.`,
+        ],
+      };
+    }
+
+    if (tampilan === "smartmap") {
+      const selectedConfigs = SMART_JENIS.filter((j) => smartJenisList.includes(j.key));
+      const matchAny = filteredHouses.filter((h) => smartJenisList.some((k) => (h as any)[k] === true)).length;
+      const persen = total > 0 ? Math.round((matchAny / total) * 100) : 0;
+
+      const selectedLabels = selectedConfigs.map((c) => c.label).join(", ");
+      const poin: string[] = [];
+
+      // Per-type breakdown
+      selectedConfigs.forEach((c) => {
+        const n = filteredHouses.filter((h) => (h as any)[c.key] === true).length;
+        const p = total > 0 ? Math.round((n / total) * 100) : 0;
+        poin.push(`${c.label}: ${n} rumah (${p}%) dari ${total} rumah terdata.`);
+      });
+
+      // RT breakdown jika tidak difilter RT
+      if (filterRT === "all" && selectedConfigs.length === 1) {
+        const key = selectedConfigs[0].key;
+        const rwMap: Record<string, { n: number; total: number }> = {};
+        filteredHouses.forEach((h) => {
+          const rw = `RW ${h.rw}`;
+          if (!rwMap[rw]) rwMap[rw] = { n: 0, total: 0 };
+          rwMap[rw].total++;
+          if ((h as any)[key]) rwMap[rw].n++;
+        });
+        const topRw = Object.entries(rwMap)
+          .filter(([, v]) => v.n > 0)
+          .sort(([, a], [, b]) => b.n - a.n)[0];
+        if (topRw) {
+          poin.push(`${topRw[0]} memiliki kasus ${selectedConfigs[0].label.toLowerCase()} terbanyak (${topRw[1].n} kasus).`);
+        }
+      }
+
+      if (selectedConfigs.length > 1) {
+        poin.push(`Total rumah dengan minimal satu perubahan yang dipilih: ${matchAny} rumah (${persen}%).`);
+      }
+
+      return {
+        ringkasan: selectedConfigs.length === 1
+          ? `Di ${lokasiLabel}, ${matchAny} dari ${total} rumah (${persen}%) mengalami ${selectedConfigs[0].label.toLowerCase()}.`
+          : `Di ${lokasiLabel}, ${matchAny} dari ${total} rumah (${persen}%) mengalami salah satu dari: ${selectedLabels}.`,
+        poin,
+      };
+    }
+
+    // tagging
+    const berubah = filteredHouses.filter((h) => h.statusPerubahan === "berubah").length;
+    const persen = total > 0 ? Math.round((berubah / total) * 100) : 0;
+    const mode = TAGGING_MODES[taggingMode];
+    return {
+      ringkasan: `Di ${lokasiLabel}, ${total} rumah ditampilkan berdasarkan ${mode?.label ?? taggingMode}.`,
+      poin: [
+        `${berubah} rumah (${persen}%) dari ${total} yang ditampilkan pernah mengalami perubahan.`,
+      ],
+    };
+  }, [filteredHouses, tampilan, smartJenisList, filterRT, filterRW, taggingMode]);
+
+  const tampilanLabel =
+    tampilan === "klaster" ? "Peta Klasterisasi"
+    : tampilan === "smartmap" ? "SMART MAP"
+    : "Peta Tagging Location";
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-6 animate-in fade-in duration-500">
@@ -227,65 +346,20 @@ export default function SmartMap() {
 
       {/* Controls Bar */}
       <Card className="shadow-sm border-border">
-        <CardContent className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <CardContent className="p-4 space-y-4">
 
-            {/* Filter utama — berubah per tampilan */}
-            <div className="space-y-1.5">
-              {tampilan === "klaster" && (
-                <>
-                  <label className="text-xs font-semibold uppercase text-muted-foreground">Filter Klaster</label>
-                  <Select value={klasterFilter} onValueChange={setKlasterFilter}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Semua Klaster</SelectItem>
-                      <SelectItem value="K1">K1 — Tidak ada perubahan</SelectItem>
-                      <SelectItem value="K2">K2 — Perubahan sedang</SelectItem>
-                      <SelectItem value="K3">K3 — Perubahan signifikan</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </>
-              )}
-              {tampilan === "smartmap" && (
-                <>
-                  <label className="text-xs font-semibold uppercase text-muted-foreground">Filter</label>
-                  <Select value={smartJenis} onValueChange={setSmartJenis}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(JENIS_LABEL).map(([key, lbl]) => (
-                        <SelectItem key={key} value={key}>{lbl}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </>
-              )}
-              {tampilan === "tagging" && (
-                <>
-                  <label className="text-xs font-semibold uppercase text-muted-foreground">Filter Warna Marker</label>
-                  <Select value={taggingMode} onValueChange={setTaggingMode}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="luasBangunan">Luas Bangunan</SelectItem>
-                      <SelectItem value="luasLahan">Luas Lahan</SelectItem>
-                      <SelectItem value="jumlahLantai">Tingkatan Rumah</SelectItem>
-                      <SelectItem value="jenisDinding">Jenis Dinding</SelectItem>
-                      <SelectItem value="jenisPlafon">Jenis Plafon</SelectItem>
-                      <SelectItem value="jeniLantai">Jenis Lantai</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </>
-              )}
-            </div>
+          {/* Row 1: RT / RW / Search / Switch Tampilan */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 
             {/* RT */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">RT</label>
+              <label className="text-xs font-semibold uppercase text-muted-foreground">Filter RT</label>
               <Select value={filterRT} onValueChange={setFilterRT}>
                 <SelectTrigger><SelectValue placeholder="Semua RT" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Semua RT</SelectItem>
-                  {["01", "02", "03", "04", "05", "06"].map((rt) => (
-                    <SelectItem key={rt} value={`RT ${rt}`}>RT {rt}</SelectItem>
+                  {RT_OPTIONS.map((rt) => (
+                    <SelectItem key={rt} value={rt}>RT {rt}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -293,13 +367,13 @@ export default function SmartMap() {
 
             {/* RW */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">RW</label>
+              <label className="text-xs font-semibold uppercase text-muted-foreground">Filter RW</label>
               <Select value={filterRW} onValueChange={setFilterRW}>
                 <SelectTrigger><SelectValue placeholder="Semua RW" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Semua RW</SelectItem>
-                  {["01", "02", "03"].map((rw) => (
-                    <SelectItem key={rw} value={`RW ${rw}`}>RW {rw}</SelectItem>
+                  {RW_OPTIONS.map((rw) => (
+                    <SelectItem key={rw} value={rw}>RW {rw}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -310,7 +384,7 @@ export default function SmartMap() {
               <label className="text-xs font-semibold uppercase text-muted-foreground">Pencarian</label>
               <div className="relative">
                 <Input
-                  placeholder="Cari Nama / ID..."
+                  placeholder="Cari Nama KK..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="pl-8"
@@ -319,10 +393,10 @@ export default function SmartMap() {
               </div>
             </div>
 
-            {/* Switch Tampilan — hanya 3 opsi */}
+            {/* Switch Tampilan */}
             <div className="space-y-1.5 border-l pl-4">
               <label className="text-xs font-semibold uppercase text-primary">Switch Tampilan</label>
-              <Select value={tampilan} onValueChange={(v: Tampilan) => setTampilan(v)}>
+              <Select value={tampilan} onValueChange={(v) => setTampilan(v as Tampilan)}>
                 <SelectTrigger className="border-primary/50 bg-primary/5">
                   <SelectValue />
                 </SelectTrigger>
@@ -333,8 +407,91 @@ export default function SmartMap() {
                 </SelectContent>
               </Select>
             </div>
-
           </div>
+
+          {/* Row 2: Sub-filter per tampilan */}
+          {tampilan === "klaster" && (
+            <div className="space-y-1.5 border-t pt-3">
+              <label className="text-xs font-semibold uppercase text-muted-foreground flex items-center gap-1.5">
+                <Filter className="w-3 h-3" /> Filter Klaster
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { value: "all", label: "Semua" },
+                  { value: "K1", label: "K1 — Tidak ada perubahan" },
+                  { value: "K2", label: "K2 — Perubahan sedang" },
+                  { value: "K3", label: "K3 — Perubahan signifikan" },
+                ].map((opt) => (
+                  <Button
+                    key={opt.value}
+                    size="sm"
+                    variant={klasterFilter === opt.value ? "default" : "outline"}
+                    className="h-7 text-xs"
+                    onClick={() => setKlasterFilter(opt.value)}
+                  >
+                    {opt.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {tampilan === "smartmap" && (
+            <div className="space-y-1.5 border-t pt-3">
+              <label className="text-xs font-semibold uppercase text-muted-foreground flex items-center gap-1.5">
+                <Filter className="w-3 h-3" /> Filter Jenis Perubahan
+                <span className="text-[10px] font-normal normal-case text-muted-foreground/70 ml-1">(pilih satu atau lebih)</span>
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {SMART_JENIS.map((j) => {
+                  const isActive = smartJenisList.includes(j.key);
+                  return (
+                    <button
+                      key={j.key}
+                      onClick={() => toggleJenis(j.key)}
+                      className={`
+                        inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border transition-all
+                        ${isActive
+                          ? "text-white border-transparent shadow-sm"
+                          : "bg-transparent text-muted-foreground border-border hover:border-foreground/40"
+                        }
+                      `}
+                      style={isActive ? { backgroundColor: j.color, borderColor: j.color } : {}}
+                    >
+                      {isActive ? (
+                        <Check className="w-3 h-3 shrink-0" />
+                      ) : (
+                        <span className="w-3 h-3 rounded-full border border-current opacity-40 shrink-0" />
+                      )}
+                      {j.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {tampilan === "tagging" && (
+            <div className="space-y-1.5 border-t pt-3">
+              <label className="text-xs font-semibold uppercase text-muted-foreground flex items-center gap-1.5">
+                <Filter className="w-3 h-3" /> Warna Marker Berdasarkan
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(TAGGING_MODES).map(([key, mode]) => (
+                  <Button
+                    key={key}
+                    size="sm"
+                    variant={taggingMode === key ? "default" : "outline"}
+                    className="h-7 text-xs"
+                    onClick={() => setTaggingMode(key)}
+                  >
+                    {mode.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+
         </CardContent>
       </Card>
 
@@ -342,7 +499,7 @@ export default function SmartMap() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* Map */}
-        <div className="lg:col-span-2 relative min-h-[500px] h-[calc(100vh-320px)] border rounded-md shadow-sm overflow-hidden bg-card">
+        <div className="lg:col-span-2 relative min-h-[500px] h-[calc(100vh-360px)] border rounded-md shadow-sm overflow-hidden bg-card">
           {isHousesLoading ? (
             <Skeleton className="w-full h-full rounded-md" />
           ) : (
@@ -350,14 +507,14 @@ export default function SmartMap() {
               data={filteredHouses}
               height="100%"
               colorByField={colorByField}
-              colorMap={tampilan === "tagging" ? (colorFn as any) : (colorFn as any)}
+              colorMap={colorFn as any}
               legend={legend}
               popupContent={(h) => (
                 <div className="space-y-3 w-[260px]">
                   <div className="flex items-start justify-between">
                     <div>
                       <div className="font-bold text-sm leading-tight text-foreground">{h.namaKepalaKeluarga}</div>
-                      <div className="text-xs text-muted-foreground font-mono">{h.id} • {h.rt}/{h.rw}</div>
+                      <div className="text-xs text-muted-foreground font-mono">RT {h.rt} / RW {h.rw}</div>
                     </div>
                     <Badge
                       variant={h.statusPerubahan === "berubah" ? "destructive" : "outline"}
@@ -371,17 +528,13 @@ export default function SmartMap() {
 
                   <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 text-xs">
                     <div className="text-muted-foreground">Luas Bgn:</div>
-                    <div className="font-medium text-right">{h.luasBangunan || "—"} m²</div>
+                    <div className="font-medium text-right">{h.luasBangunan ? `${h.luasBangunan} m²` : "—"}</div>
                     <div className="text-muted-foreground">Luas Lahan:</div>
-                    <div className="font-medium text-right">{h.luasLahan || "—"} m²</div>
-                    <div className="text-muted-foreground">Kondisi:</div>
-                    <div className="font-medium text-right">{h.kondisiBangunan || "—"}</div>
+                    <div className="font-medium text-right">{h.luasLahan ? `${h.luasLahan} m²` : "—"}</div>
                     <div className="text-muted-foreground">Lantai:</div>
                     <div className="font-medium text-right">{h.jeniLantai || "—"} ({h.jumlahLantai || "—"} Lt)</div>
                     <div className="text-muted-foreground">Dinding:</div>
                     <div className="font-medium text-right">{h.jenisDinding || "—"}</div>
-                    <div className="text-muted-foreground">Atap:</div>
-                    <div className="font-medium text-right">{h.jenisAtap || "—"}</div>
                     <div className="text-muted-foreground">Pagar:</div>
                     <div className="font-medium text-right">{h.pagar || "—"}</div>
                   </div>
@@ -390,19 +543,16 @@ export default function SmartMap() {
 
                   <div>
                     <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5">
-                      Status Perubahan Indikator
+                      Status Perubahan
                     </div>
                     <div className="grid grid-cols-1 gap-1">
                       {[
                         { label: "Pagar", changed: h.perubahanPagar },
                         { label: "Luas Bangunan", changed: h.perubahanLuasBangunan },
-                        { label: "Jumlah Lantai", changed: h.perubahanJumlahLantai },
                         { label: "Luas Lahan", changed: h.perubahanLuasLahan },
-                        { label: "Jenis Lantai", changed: h.perubahanJenisLantai },
-                        { label: "Jenis Dinding", changed: h.perubahanJenisDinding },
-                        { label: "Jenis Atap", changed: h.perubahanJenisAtap },
-                      ].map((ind, i) => (
-                        <div key={i} className="flex items-center justify-between text-xs">
+                        { label: "Jumlah Lantai", changed: h.perubahanJumlahLantai },
+                      ].map((ind) => (
+                        <div key={ind.label} className="flex items-center justify-between text-xs">
                           <span className={ind.changed ? "text-destructive font-medium" : "text-muted-foreground"}>
                             {ind.label}
                           </span>
@@ -430,6 +580,8 @@ export default function SmartMap() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+
+              {/* Count badge */}
               <div className="flex items-center gap-3 bg-primary-foreground/10 rounded-md p-3">
                 <Building2 className="w-8 h-8 text-primary-foreground/80" />
                 <div>
@@ -440,6 +592,16 @@ export default function SmartMap() {
                     {isHousesLoading ? "..." : filteredHouses.length}
                     <span className="text-sm font-sans font-normal text-primary-foreground/80 ml-1">rumah</span>
                   </div>
+                  {(filterRT !== "all" || filterRW !== "all") && (
+                    <div className="flex gap-1 mt-1 flex-wrap">
+                      {filterRT !== "all" && (
+                        <span className="text-[10px] bg-primary-foreground/20 px-1.5 py-0.5 rounded font-mono">RT {filterRT}</span>
+                      )}
+                      {filterRW !== "all" && (
+                        <span className="text-[10px] bg-primary-foreground/20 px-1.5 py-0.5 rounded font-mono">RW {filterRW}</span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -464,7 +626,8 @@ export default function SmartMap() {
 
               <Separator className="bg-primary-foreground/20" />
 
-              {isInsightLoading ? (
+              {/* Dynamic insight */}
+              {isHousesLoading ? (
                 <div className="space-y-2">
                   <Skeleton className="h-4 w-full bg-primary-foreground/20" />
                   <Skeleton className="h-4 w-5/6 bg-primary-foreground/20" />
@@ -483,7 +646,7 @@ export default function SmartMap() {
                   </ul>
                 </div>
               ) : (
-                <div className="text-sm text-primary-foreground/70">Tidak ada insight tersedia.</div>
+                <div className="text-sm text-primary-foreground/70">Tidak ada data.</div>
               )}
             </CardContent>
           </Card>

@@ -819,26 +819,32 @@ export default function Dashboard() {
                 />
               </div>
 
-              {/* Sidebar Smart: per-RW breakdown */}
+              {/* Sidebar Smart: per-RW breakdown — struktur sama dgn Tagging Location */}
               <div className="lg:w-60 xl:w-64 border-t lg:border-t-0 lg:border-l flex flex-col">
+                {/* Header */}
                 <div className="px-4 pt-3 pb-2 border-b">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     {JENIS_LABEL[dashSmartJenis]} Per RW
                   </p>
+                  <p className="text-[9px] text-muted-foreground/70 mt-0.5">
+                    Sorotan: Rumah yang mengalami {JENIS_LABEL[dashSmartJenis]?.toLowerCase()}
+                  </p>
                 </div>
-                <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+
+                {/* Per-RW bars */}
+                <div className="overflow-y-auto px-4 py-3 space-y-2.5 max-h-44">
                   {dashSmartPerRw.length === 0 ? (
-                    <p className="text-xs text-muted-foreground text-center py-4">Tidak ada data</p>
+                    <p className="text-xs text-muted-foreground text-center py-2">Tidak ada data</p>
                   ) : (
                     dashSmartPerRw.map(({ rw, berubah, total }) => (
                       <div key={rw} className="space-y-0.5">
                         <div className="flex items-center justify-between text-xs">
                           <span className="font-semibold text-foreground">{rw}</span>
-                          <span className="font-mono font-bold text-destructive">{berubah}</span>
+                          <span className="font-mono font-bold text-primary">{berubah}</span>
                         </div>
                         <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                           <div
-                            className="h-full bg-destructive rounded-full transition-all"
+                            className="h-full bg-primary rounded-full transition-all"
                             style={{ width: total > 0 ? `${(berubah / total) * 100}%` : "0%" }}
                           />
                         </div>
@@ -849,15 +855,34 @@ export default function Dashboard() {
                     ))
                   )}
                 </div>
-                <div className="border-t px-4 py-3 space-y-2">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-1">Smart Insight</p>
+
+                {/* Legenda */}
+                <div className="border-t px-4 pt-3 pb-2">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Legenda</p>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-primary" />
+                      <span className="text-[11px] text-foreground">{JENIS_LABEL[dashSmartJenis]}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-muted-foreground/30" />
+                      <span className="text-[11px] text-foreground">Tidak Ada Perubahan</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Smart Insight Per Filter */}
+                <div className="border-t px-4 py-3 mt-auto">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-1.5">
+                    Smart Insight Per Filter
+                  </p>
                   <p className="text-xs text-foreground leading-relaxed">
                     {dashSmartTotal} dari {(allHouses ?? []).length} rumah (
                     {(allHouses ?? []).length > 0
                       ? ((dashSmartTotal / (allHouses ?? []).length) * 100).toFixed(1)
                       : 0}%) mengalami {JENIS_LABEL[dashSmartJenis]?.toLowerCase()}.
                   </p>
-                  <Link href="/smart-map" className="text-[10px] text-primary font-semibold flex items-center gap-1 hover:underline">
+                  <Link href="/smart-map" className="text-[10px] text-primary font-semibold flex items-center gap-1 hover:underline mt-2">
                     Buka Smart Map lengkap <ExternalLink className="w-3 h-3" />
                   </Link>
                 </div>

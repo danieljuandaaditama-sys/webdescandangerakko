@@ -10,7 +10,7 @@ import { Link } from "wouter";
 import {
   Home, Activity, CheckCircle2, ChevronLeft, ChevronRight,
   BarChart3, Info, Map, AlertCircle, ExternalLink,
-  Shield, Building2, Layers, SquareDashed,
+  Shield, Building2, Layers, SquareDashed, Check,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -78,13 +78,10 @@ function getJenisLabel(h: any): string {
 // ─── Map filter configs ──────────────────────────────────────────────────────
 
 const JENIS_LABEL: Record<string, string> = {
-  perubahanJenisLantai: "Perubahan Jenis Lantai",
-  perubahanJenisDinding: "Perubahan Jenis Dinding",
+  perubahanPagar: "Perubahan Pagar",
   perubahanLuasBangunan: "Perubahan Luas Bangunan",
   perubahanLuasLahan: "Perubahan Luas Lahan",
-  perubahanJenisAtap: "Perubahan Jenis Atap",
   perubahanJumlahLantai: "Perubahan Jumlah Lantai",
-  perubahanPagar: "Perubahan Pagar",
 };
 
 const TAGGING_MODES: Record<string, {

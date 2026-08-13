@@ -43,13 +43,10 @@ function lantaiColor(v: string | null | undefined) {
 type Tampilan = "klaster" | "smartmap" | "tagging";
 
 const JENIS_LABEL: Record<string, string> = {
-  perubahanJenisLantai: "Perubahan Jenis Lantai",
-  perubahanJenisDinding: "Perubahan Jenis Dinding",
+  perubahanPagar: "Perubahan Pagar",
   perubahanLuasBangunan: "Perubahan Luas Bangunan",
   perubahanLuasLahan: "Perubahan Luas Lahan",
-  perubahanJenisAtap: "Perubahan Jenis Atap",
   perubahanJumlahLantai: "Perubahan Jumlah Lantai",
-  perubahanPagar: "Perubahan Pagar",
 };
 
 const TAGGING_MODES: Record<string, {
@@ -148,7 +145,7 @@ export default function SmartMap() {
 
   // Filter states — each tampilan uses its own
   const [klasterFilter, setKlasterFilter] = useState<string>("all");
-  const [smartJenis, setSmartJenis] = useState<string>("perubahanJenisLantai");
+  const [smartJenis, setSmartJenis] = useState<string>("perubahanPagar");
   const [taggingMode, setTaggingMode] = useState<string>("luasBangunan");
 
   // Global filters (apply to all tampilan)

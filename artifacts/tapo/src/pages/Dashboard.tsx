@@ -193,6 +193,24 @@ const TAGGING_MODES: Record<string, {
   },
 };
 
+// ─── Asset path helper ───────────────────────────────────────────────────────
+const BASE = import.meta.env.BASE_URL; // e.g. "/tapo/"
+const HOUSES_IMG = `${BASE}assets/houses-panels.png`;
+const PANORAMIC_IMG = `${BASE}assets/village-panoramic.png`;
+
+/**
+ * Background-position values for each card using background-size: "600% auto".
+ * The composite image has 3 panels in top row and 2 in bottom row.
+ * Formula: p_x = (center_x_ratio × 5) × 100 / 5, p_y = (center_y_ratio × 2.51 - 0.5) / 2.51 × 100
+ * Big card uses panel 1 (top-left house with road), set inline.
+ */
+const CARD_BG_POS: Record<string, string> = {
+  "Perubahan Pagar":         "50% 19%",  // top-center (house + fence)
+  "Perubahan Luas Bangunan": "91% 19%",  // top-right  (under construction)
+  "Perubahan Luas Lahan":    "20% 81%",  // bottom-left (rural landscape)
+  "Perubahan Jumlah Lantai": "82% 81%",  // bottom-right (2-story house)
+};
+
 // ─── Main ───────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
@@ -344,6 +362,18 @@ export default function Dashboard() {
             {/* Decorative circles */}
             <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full opacity-10" style={{ background: "white" }} />
             <div className="absolute -bottom-8 -left-4 w-24 h-24 rounded-full opacity-10" style={{ background: "white" }} />
+            {/* House illustration — top-left panel (house with road) */}
+            <div
+              className="absolute right-0 top-0 w-[54%] h-full pointer-events-none"
+              style={{
+                backgroundImage: `url(${HOUSES_IMG})`,
+                backgroundSize: "600% auto",
+                backgroundPosition: "9% 19%",
+                backgroundRepeat: "no-repeat",
+                opacity: 0.42,
+                mixBlendMode: "luminosity",
+              }}
+            />
 
             <div className="relative">
               <div className="flex items-baseline gap-2">
@@ -476,9 +506,21 @@ export default function Dashboard() {
                     style={{ background: `linear-gradient(135deg, ${card.from} 0%, ${card.to} 100%)` }}
                   >
                     <CardContent className="p-5 relative overflow-hidden h-full min-h-[130px]">
+                      {/* House illustration — specific panel per card */}
+                      <div
+                        className="absolute right-0 top-0 w-[54%] h-full pointer-events-none"
+                        style={{
+                          backgroundImage: `url(${HOUSES_IMG})`,
+                          backgroundSize: "600% auto",
+                          backgroundPosition: CARD_BG_POS[card.label] ?? "50% 50%",
+                          backgroundRepeat: "no-repeat",
+                          opacity: 0.38,
+                          mixBlendMode: "luminosity",
+                        }}
+                      />
                       {/* Large decorative background icon */}
                       <Icon
-                        className="absolute -bottom-3 -right-3 opacity-[0.15]"
+                        className="absolute -bottom-3 -right-3 opacity-[0.08]"
                         style={{ width: 110, height: 110, color: "white" }}
                         strokeWidth={1}
                       />
@@ -514,6 +556,17 @@ export default function Dashboard() {
             </div>
           );
         })()}
+      </div>
+
+      {/* ── Panoramic village strip ──────────────────────────────────── */}
+      <div className="w-full h-28 md:h-36 rounded-xl overflow-hidden shadow-sm relative">
+        <img
+          src={PANORAMIC_IMG}
+          alt="Ilustrasi pemukiman Kelurahan Boting"
+          className="w-full h-full object-cover object-center"
+          style={{ filter: "brightness(0.92) saturate(1.1)" }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-background/40 to-transparent" />
       </div>
 
       {/* ── CONTENT TABS: Grafik | Tabel Seluruhnya | Tabel Perubahan ── */}

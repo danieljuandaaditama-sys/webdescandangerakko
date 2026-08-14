@@ -558,17 +558,6 @@ export default function Dashboard() {
         })()}
       </div>
 
-      {/* ── Panoramic village strip ──────────────────────────────────── */}
-      <div className="w-full h-28 md:h-36 rounded-xl overflow-hidden shadow-sm relative">
-        <img
-          src={PANORAMIC_IMG}
-          alt="Ilustrasi pemukiman Kelurahan Boting"
-          className="w-full h-full object-cover object-center"
-          style={{ filter: "brightness(0.92) saturate(1.1)" }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-background/40 to-transparent" />
-      </div>
-
       {/* ── CONTENT TABS: Grafik | Tabel Seluruhnya | Tabel Perubahan ── */}
       <div className="border rounded-lg bg-card shadow-sm overflow-hidden">
         <Tabs defaultValue="grafik">

@@ -17,10 +17,22 @@ export function Shell({ children }: ShellProps) {
     { href: "/metadata", label: "Metadata", icon: FileText },
   ];
 
+  const BASE = import.meta.env.BASE_URL;
+
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-background">
+    <div
+      className="min-h-[100dvh] flex flex-col"
+      style={{
+        backgroundImage: `url(${BASE}assets/bg-village.png)`,
+        backgroundSize: "cover",
+        backgroundPosition: "bottom center",
+        backgroundRepeat: "no-repeat",
+        backgroundAttachment: "fixed",
+        backgroundColor: "#ddeeff",
+      }}
+    >
       {/* Top Navbar */}
-      <header className="sticky top-0 z-40 w-full border-b bg-card shadow-sm">
+      <header className="sticky top-0 z-40 w-full border-b border-white/40 bg-white/70 backdrop-blur-md shadow-sm">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="bg-primary text-primary-foreground p-2 rounded-md">
@@ -59,7 +71,7 @@ export function Shell({ children }: ShellProps) {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1">
+      <main className="flex-1 bg-transparent">
         {children}
       </main>
     </div>

@@ -625,7 +625,7 @@ export default function SmartMap() {
                     href={`https://www.google.com/maps?q=${h.lat},${h.lng}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:opacity-90 transition-opacity"
+className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-xs font-semibold text-white hover:opacity-90 transition-opacity"
                   >
                     📍 Buka di Google Maps
                   </a>

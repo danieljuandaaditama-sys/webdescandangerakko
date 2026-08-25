@@ -52,19 +52,19 @@ type HousingMetadata = {
  * Tidak lagi bergantung pada API Replit.
  */
 const metadata: HousingMetadata = {
-  namaDataset: "Pendataan Lengkap Perumahan Kelurahan Lagaligo",
+  namaDataset: "Pendataan Lengkap Perumahan Kelurahan Dangerakko",
 
   periodeData: "2026",
 
   sumberData:
-    "Pemerintah Kelurahan Lagaligo, Kecamatan Wara Timur, Kota Palopo",
+    "Pemerintah Kelurahan Dangerakko, Kecamatan Wara Timur, Kota Palopo",
 
   unitObservasi: "Bangunan/Rumah Tangga",
 
   cakupanWilayah:
-    "Kelurahan Lagaligo, Kecamatan Wara Timur, Kota Palopo, sulawesi selatan",
+    "Kelurahan Dangerakko, Kecamatan Wara Timur, Kota Palopo, sulawesi selatan",
 
-  jumlahObservasi: 105,
+  jumlahObservasi: 405,
 
   informasiKoordinat:
     "Koordinat GPS (WGS84 — Decimal Degrees). Lat ≈ -2.97 hingga -2.99, Lng ≈ 120.19. Catatan: koordinat saat ini adalah representatif hasil survei pendataan lengkap perumahan.",

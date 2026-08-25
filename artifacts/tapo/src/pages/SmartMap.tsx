@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { listHouses, type HouseFilters } from "@/data/localHousing";
+import { useListHouses, type ListHousesParams } from "@workspace/api-client-react";
 import { Map as MapIcon, Info, Search, Check, X, Building2, Filter } from "lucide-react";
 
 import { LeafletMapEngine } from "@/components/map/LeafletMapEngine";
@@ -173,17 +173,18 @@ export default function SmartMap() {
     });
   }
 
-  // Build local filter params. The dataset is fixed, so no API request is needed.
-  const queryParams: HouseFilters = useMemo(() => {
-    const p: HouseFilters = {};
+  // Build API query params (RT/RW use real values: "1", "2", etc.)
+  const queryParams: ListHousesParams = useMemo(() => {
+    const p: ListHousesParams = {};
     if (filterRT !== "all") p.rt = filterRT;
     if (filterRW !== "all") p.rw = filterRW;
-    if (tampilan === "klaster" && klasterFilter !== "all") p.klaster = klasterFilter;
+    if (tampilan === "klaster" && klasterFilter !== "all") p.klaster = klasterFilter as any;
     return p;
   }, [filterRT, filterRW, tampilan, klasterFilter]);
 
-  const houses = useMemo(() => listHouses(queryParams), [queryParams]);
-  const isHousesLoading = false;
+  const { data: houses, isLoading: isHousesLoading } = useListHouses(queryParams, {
+    query: { queryKey: ["smartmap", "houses", queryParams] },
+  });
 
   // Client-side text search
   const filteredHouses = useMemo(() => {
@@ -317,9 +318,100 @@ export default function SmartMap() {
     const berubah = filteredHouses.filter((h) => h.statusPerubahan === "berubah").length;
     const persen = total > 0 ? Math.round((berubah / total) * 100) : 0;
     const mode = TAGGING_MODES[taggingMode];
+
+    // Hitung jumlah + persentase setiap kategori yang sedang ditampilkan.
+    // Kategorinya dibuat mengikuti legenda warna pada peta, sehingga angka
+    // di Smart Insight selalu konsisten dengan marker dan legenda.
+    const getTaggingCategory = (h: any): string => {
+      switch (taggingMode) {
+        case "luasBangunan": {
+          const v = Number(h.luasBangunan);
+          if (!v) return "Tidak Ada/Lainnya";
+          if (v > 100) return "> 100 m²";
+          if (v >= 50) return "50 – 100 m²";
+          return "< 50 m²";
+        }
+
+        case "luasLahan": {
+          const v = Number(h.luasLahan);
+          if (!v) return "Tidak Ada/Lainnya";
+          if (v > 200) return "> 200 m²";
+          if (v >= 100) return "100 – 200 m²";
+          return "< 100 m²";
+        }
+
+        case "jumlahLantai": {
+          const v = Number(h.jumlahLantai);
+          if (!v) return "Tidak Ada/Lainnya";
+          if (v === 1) return "Lantai 1";
+          if (v === 2) return "Lantai 2";
+          return "Lantai 3+";
+        }
+
+        case "jenisDinding": {
+          const v = String(h.jenisDinding ?? "").toLowerCase();
+          if (v.includes("tembok")) return "Tembok";
+          if (v.includes("kayu")) return "Kayu";
+          if (v.includes("bambu") || v.includes("seng")) return "Bambu/Seng";
+          return "Tidak Ada/Lainnya";
+        }
+
+        case "jenisPlafon": {
+          const v = String(h.jenisPlafon ?? "").toLowerCase();
+          if (v.includes("triplek") || v.includes("asbes") || v.includes("bambu")) {
+            return "Triplek/Asbes/Bambu";
+          }
+          if (v.includes("pvc")) return "PVC";
+          if (v.includes("beton") || v.includes("plat")) return "Beton/Plat";
+          if (
+            v.includes("kayu") ||
+            v.includes("akustik") ||
+            v.includes("gypsum") ||
+            v.includes("kalsibor")
+          ) {
+            return "Kayu/Gypsum/Kalsibor";
+          }
+          return "Tidak Ada/Lainnya";
+        }
+
+        case "jeniLantai": {
+          const v = String(h.jeniLantai ?? "").toLowerCase();
+          if (v === "keramik") return "Keramik";
+          if (v.includes("marmer") || v.includes("granit")) return "Marmer/Granit";
+          if (v === "semen") return "Semen";
+          if (v.includes("kayu") || v.includes("papan")) return "Kayu/Papan";
+          return "Tidak Ada/Lainnya";
+        }
+
+        default:
+          return "Tidak Ada/Lainnya";
+      }
+    };
+
+    const categoryCounts: Record<string, number> = {};
+    filteredHouses.forEach((h) => {
+      const category = getTaggingCategory(h);
+      categoryCounts[category] = (categoryCounts[category] ?? 0) + 1;
+    });
+
+    const categoryOrder =
+      mode?.legend.map((item) => item.label) ?? Object.keys(categoryCounts);
+
+    const breakdown = categoryOrder
+      .map((label) => {
+        const n = categoryCounts[label] ?? 0;
+        const p = total > 0 ? ((n / total) * 100).toFixed(1) : "0.0";
+        return `${label}: ${n} rumah (${p}%).`;
+      })
+      .filter((text) => {
+        // Tetap tampilkan kategori meskipun 0 agar insight sama dengan legenda.
+        return true;
+      });
+
     return {
       ringkasan: `Di ${lokasiLabel}, ${total} rumah ditampilkan berdasarkan ${mode?.label ?? taggingMode}.`,
       poin: [
+        ...breakdown,
         `${berubah} rumah (${persen}%) dari ${total} yang ditampilkan pernah mengalami perubahan.`,
       ],
     };

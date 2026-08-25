@@ -74,7 +74,7 @@ export default function DataPerumahan() {
   // DATA LAGALIGO
   // =========================================================
   const houses = useMemo(() => {
-    return lagaligoData.filter((h) => {
+    return dangerakkoData.filter((h) => {
       if (
         filterStatus !== "all" &&
         h.statusPerubahan !== filterStatus

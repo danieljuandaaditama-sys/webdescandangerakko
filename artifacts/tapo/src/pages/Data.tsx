@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { lagaligoData } from "@/data/lagaligo-data";
+import { dangerakkoData, type House } from "@/data/dangerakko-data";
 import {
   Database,
   Search,

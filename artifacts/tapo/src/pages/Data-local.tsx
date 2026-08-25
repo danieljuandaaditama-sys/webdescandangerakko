@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useListHouses, type ListHousesParams } from "@workspace/api-client-react";
+import { botingData } from "@/data/boting-data";
 import { Database, Search, Download, ChevronLeft, ChevronRight, ChevronsUpDown, ChevronUp, ChevronDown } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -26,16 +26,23 @@ export default function DataPerumahan() {
   const [sortField, setSortField] = useState<SortField>("id");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
 
-  // Build params
-  const params: ListHousesParams = {};
-  if (filterStatus !== "all") params.statusPerubahan = filterStatus as any;
-  if (filterJenis !== "all") params.jenisPerubahan = filterJenis as any;
-  if (filterKondisi !== "all") params.kondisiBangunan = filterKondisi;
-  if (filterRT !== "all") params.rt = filterRT;
+  // Data is fixed and bundled locally; no API request is needed.
+  const houses = useMemo(() => {
+    return botingData.filter((h) => {
+      if (filterStatus !== "all" && h.statusPerubahan !== filterStatus) return false;
+      if (filterKondisi !== "all" && h.kondisiBangunan !== filterKondisi) return false;
+      if (filterRT !== "all" && h.rt !== filterRT) return false;
 
-  const { data: houses, isLoading } = useListHouses(params, {
-    query: { queryKey: ["data", "houses", params] }
-  });
+      if (filterJenis !== "all") {
+        const jenisField = filterJenis as keyof typeof h;
+        if (h[jenisField] !== true) return false;
+      }
+
+      return true;
+    });
+  }, [filterStatus, filterJenis, filterKondisi, filterRT]);
+
+  const isLoading = false;
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) {

@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useListHouses, type ListHousesParams } from "@workspace/api-client-react";
+import { listHouses, type HouseFilters } from "@/data/localHousing";
 import { Map as MapIcon, Info, Search, Check, X, Building2, Filter } from "lucide-react";
 
 import { LeafletMapEngine } from "@/components/map/LeafletMapEngine";
@@ -173,18 +173,17 @@ export default function SmartMap() {
     });
   }
 
-  // Build API query params (RT/RW use real values: "1", "2", etc.)
-  const queryParams: ListHousesParams = useMemo(() => {
-    const p: ListHousesParams = {};
+  // Build local filter params. The dataset is fixed, so no API request is needed.
+  const queryParams: HouseFilters = useMemo(() => {
+    const p: HouseFilters = {};
     if (filterRT !== "all") p.rt = filterRT;
     if (filterRW !== "all") p.rw = filterRW;
-    if (tampilan === "klaster" && klasterFilter !== "all") p.klaster = klasterFilter as any;
+    if (tampilan === "klaster" && klasterFilter !== "all") p.klaster = klasterFilter;
     return p;
   }, [filterRT, filterRW, tampilan, klasterFilter]);
 
-  const { data: houses, isLoading: isHousesLoading } = useListHouses(queryParams, {
-    query: { queryKey: ["smartmap", "houses", queryParams] },
-  });
+  const houses = useMemo(() => listHouses(queryParams), [queryParams]);
+  const isHousesLoading = false;
 
   // Client-side text search
   const filteredHouses = useMemo(() => {

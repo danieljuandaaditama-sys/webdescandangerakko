@@ -1,11 +1,11 @@
 import { useState, useMemo } from "react";
 import {
-  useGetHousingSummary,
-  useGetHousingChartData,
-  useGetHousingInsight,
-  useListHouses,
-  useListChangedHouses,
-} from "@workspace/api-client-react";
+  getHousingSummary,
+  getHousingChartData,
+  getHousingInsight,
+  listHouses,
+  listChangedHouses,
+} from "@/data/localHousing";
 import { Link } from "wouter";
 import {
   Home, Activity, CheckCircle2, ChevronLeft, ChevronRight,
@@ -214,11 +214,18 @@ const CARD_BG_POS: Record<string, string> = {
 // ─── Main ───────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
-  const { data: summary, isLoading: sumLoading } = useGetHousingSummary({ query: { queryKey: ["d","sum"] } });
-  const { data: chartData, isLoading: chartLoading } = useGetHousingChartData({ query: { queryKey: ["d","chart"] } });
-  const { data: insight, isLoading: insightLoading } = useGetHousingInsight(undefined, { query: { queryKey: ["d","insight"] } });
-  const { data: allHouses, isLoading: allLoading } = useListHouses(undefined, { query: { queryKey: ["d","all"] } });
-  const { data: changedHouses, isLoading: changedLoading } = useListChangedHouses({ query: { queryKey: ["d","changed"] } });
+  // Dataset is fixed, so Dashboard reads directly from the local data adapter.
+  const summary = getHousingSummary();
+  const chartData = getHousingChartData();
+  const insight = getHousingInsight();
+  const allHouses = listHouses();
+  const changedHouses = listChangedHouses();
+
+  const sumLoading = false;
+  const chartLoading = false;
+  const insightLoading = false;
+  const allLoading = false;
+  const changedLoading = false;
 
   const [insightSlide, setInsightSlide] = useState(0);
   const [searchAll, setSearchAll] = useState("");

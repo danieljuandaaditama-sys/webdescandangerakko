@@ -67,7 +67,7 @@ const metadata: HousingMetadata = {
   jumlahObservasi: 573,
 
   informasiKoordinat:
-    "Koordinat GPS (WGS84 — Decimal Degrees). Lat ≈ -2.97 hingga -2.99, Lng ≈ 120.19. Catatan: koordinat saat ini adalah perkiraan representatif; koordinat GPS lapangan akan menggantikan setelah upload dataset asli.",
+    "Koordinat GPS (WGS84 — Decimal Degrees). Lat ≈ -2.97 hingga -2.99, Lng ≈ 120.19. Catatan: koordinat saat ini adalah representatif hasil survei pendataan lengkap perumahan.",
 
   keteranganIndikator:
     "Terdapat 7 indikator perubahan yang didata: Pagar, Luas Bangunan, Jumlah Lantai, Jenis Lantai, Jenis Dinding, Luas Lahan, dan Jenis Atap. Status perubahan (berubah/tidak berubah) diturunkan secara otomatis dari ketujuh indikator tersebut.",

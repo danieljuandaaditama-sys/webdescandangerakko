@@ -52,19 +52,19 @@ type HousingMetadata = {
  * Tidak lagi bergantung pada API Replit.
  */
 const metadata: HousingMetadata = {
-  namaDataset: "Pendataan Lengkap Perumahan Kelurahan Boting",
+  namaDataset: "Pendataan Lengkap Perumahan Kelurahan Lagaligo",
 
   periodeData: "2026",
 
   sumberData:
-    "Pemerintah Kelurahan Boting, Kecamatan Wara Timur, Kota Palopo",
+    "Pemerintah Kelurahan Lagaligo, Kecamatan Wara Timur, Kota Palopo",
 
   unitObservasi: "Bangunan/Rumah Tangga",
 
   cakupanWilayah:
-    "Kelurahan Boting, Kecamatan Wara Timur, Kota Palopo, sulawesi selatan",
+    "Kelurahan Lagaligo, Kecamatan Wara Timur, Kota Palopo, sulawesi selatan",
 
-  jumlahObservasi: 573,
+  jumlahObservasi: 105,
 
   informasiKoordinat:
     "Koordinat GPS (WGS84 — Decimal Degrees). Lat ≈ -2.97 hingga -2.99, Lng ≈ 120.19. Catatan: koordinat saat ini adalah representatif hasil survei pendataan lengkap perumahan.",

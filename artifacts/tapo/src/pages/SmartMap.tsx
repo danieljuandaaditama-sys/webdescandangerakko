@@ -621,6 +621,15 @@ export default function SmartMap() {
 
                   <Separator />
 
+                  <a
+                    href={`https://www.google.com/maps?q=${h.lat},${h.lng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:opacity-90 transition-opacity"
+                  >
+                    📍 Buka di Google Maps
+                  </a>
+
                   <div>
                     <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5">
                       Status Perubahan

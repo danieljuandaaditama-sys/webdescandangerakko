@@ -1,4 +1,4 @@
-import { lagaligoData, type House } from "./lagaligo-data";
+import { dangerakkoData, type House } from "./dangerakko-data";
 
 export const JENIS_PERUBAHAN_LABELS: Record<string, string> = {
   perubahanPagar: "Perubahan Pagar",
@@ -26,75 +26,110 @@ export type HouseFilters = {
 };
 
 export function listHouses(filters: HouseFilters = {}): House[] {
-  return lagaligoData.filter((h) => {
+  return dangerakkoData.filter((h) => {
     if (
       filters.statusPerubahan &&
       h.statusPerubahan !== filters.statusPerubahan
-    )
+    ) {
       return false;
+    }
 
     if (filters.jenisPerubahan) {
       const key = filters.jenisPerubahan as keyof House;
-      if (!h[key]) return false;
+
+      if (!h[key]) {
+        return false;
+      }
     }
 
     if (
       filters.kondisiBangunan &&
       h.kondisiBangunan !== filters.kondisiBangunan
-    )
+    ) {
       return false;
+    }
 
-    if (filters.rt && h.rt !== filters.rt) return false;
-    if (filters.rw && h.rw !== filters.rw) return false;
-    if (filters.klaster && h.klaster !== filters.klaster) return false;
-    if (filters.jeniLantai && h.jeniLantai !== filters.jeniLantai)
+    if (filters.rt && h.rt !== filters.rt) {
       return false;
-    if (filters.jenisDinding && h.jenisDinding !== filters.jenisDinding)
+    }
+
+    if (filters.rw && h.rw !== filters.rw) {
       return false;
+    }
+
+    if (filters.klaster && h.klaster !== filters.klaster) {
+      return false;
+    }
+
+    if (
+      filters.jeniLantai &&
+      h.jeniLantai !== filters.jeniLantai
+    ) {
+      return false;
+    }
+
+    if (
+      filters.jenisDinding &&
+      h.jenisDinding !== filters.jenisDinding
+    ) {
+      return false;
+    }
 
     return true;
   });
 }
 
 export function getHousingSummary() {
-  const total = lagaligoData.length;
+  const total = dangerakkoData.length;
 
-  const berubah = lagaligoData.filter(
+  const berubah = dangerakkoData.filter(
     (h) => h.statusPerubahan === "berubah",
   ).length;
 
   const byJenisPerubahan = JENIS_PERUBAHAN_KEYS
     .map((key) => ({
       label: JENIS_PERUBAHAN_LABELS[key as string],
-      jumlah: lagaligoData.filter((h) => h[key] === true).length,
+      jumlah: dangerakkoData.filter(
+        (h) => h[key] === true,
+      ).length,
     }))
     .filter((item) => item.jumlah > 0)
     .sort((a, b) => b.jumlah - a.jumlah);
 
-  const byKondisi = ["Baik", "Rusak Ringan", "Rusak Berat"].map(
+  const byKondisi = [
+    "Baik",
+    "Rusak Ringan",
+    "Rusak Berat",
+  ].map((label) => ({
+    label,
+    jumlah: dangerakkoData.filter(
+      (h) => h.kondisiBangunan === label,
+    ).length,
+  }));
+
+  const rtSet = [
+    ...new Set(dangerakkoData.map((h) => h.rt)),
+  ].sort();
+
+  const byRt = rtSet.map((rt) => ({
+    label: rt,
+    jumlah: dangerakkoData.filter(
+      (h) => h.rt === rt,
+    ).length,
+  }));
+
+  const byKlaster = ["K1", "K2", "K3"].map(
     (label) => ({
       label,
-      jumlah: lagaligoData.filter(
-        (h) => h.kondisiBangunan === label,
+      jumlah: dangerakkoData.filter(
+        (h) => h.klaster === label,
       ).length,
     }),
   );
 
-  const rtSet = [...new Set(lagaligoData.map((h) => h.rt))].sort();
-
-  const byRt = rtSet.map((rt) => ({
-    label: rt,
-    jumlah: lagaligoData.filter((h) => h.rt === rt).length,
-  }));
-
-  const byKlaster = ["K1", "K2", "K3"].map((label) => ({
-    label,
-    jumlah: lagaligoData.filter((h) => h.klaster === label).length,
-  }));
-
   const lantaiSet = [
     ...new Set(
-      lagaligoData
+      dangerakkoData
         .map((h) => h.jeniLantai)
         .filter(Boolean),
     ),
@@ -103,7 +138,7 @@ export function getHousingSummary() {
   const byJenisLantai = lantaiSet
     .map((label) => ({
       label,
-      jumlah: lagaligoData.filter(
+      jumlah: dangerakkoData.filter(
         (h) => h.jeniLantai === label,
       ).length,
     }))
@@ -111,7 +146,7 @@ export function getHousingSummary() {
 
   const dindingSet = [
     ...new Set(
-      lagaligoData
+      dangerakkoData
         .map((h) => h.jenisDinding)
         .filter(Boolean),
     ),
@@ -120,7 +155,7 @@ export function getHousingSummary() {
   const byJenisDinding = dindingSet
     .map((label) => ({
       label,
-      jumlah: lagaligoData.filter(
+      jumlah: dangerakkoData.filter(
         (h) => h.jenisDinding === label,
       ).length,
     }))
@@ -130,10 +165,12 @@ export function getHousingSummary() {
     totalRumah: total,
     rumahBerubah: berubah,
     rumahTidakBerubah: total - berubah,
+
     persenPerubahan:
       total > 0
         ? Math.round((berubah / total) * 100)
         : 0,
+
     byJenisPerubahan,
     byKondisi,
     byRt,
@@ -147,7 +184,9 @@ export function getHousingChartData() {
   const jenisPerubahan = JENIS_PERUBAHAN_KEYS
     .map((key) => ({
       label: JENIS_PERUBAHAN_LABELS[key as string],
-      jumlah: lagaligoData.filter((h) => h[key] === true).length,
+      jumlah: dangerakkoData.filter(
+        (h) => h[key] === true,
+      ).length,
     }))
     .filter((item) => item.jumlah > 0)
     .sort((a, b) => b.jumlah - a.jumlah);
@@ -158,17 +197,19 @@ export function getHousingChartData() {
     "Rusak Berat",
   ].map((label) => ({
     label,
-    jumlah: lagaligoData.filter(
+    jumlah: dangerakkoData.filter(
       (h) => h.kondisiBangunan === label,
     ).length,
   }));
 
   const rtSet = [
-    ...new Set(lagaligoData.map((h) => h.rt)),
+    ...new Set(
+      dangerakkoData.map((h) => h.rt),
+    ),
   ].sort();
 
   const statusPerRt = rtSet.map((rt) => {
-    const houses = lagaligoData.filter(
+    const houses = dangerakkoData.filter(
       (h) => h.rt === rt,
     );
 
@@ -179,25 +220,28 @@ export function getHousingChartData() {
     return {
       rt,
       berubah,
-      tidakBerubah: houses.length - berubah,
+      tidakBerubah:
+        houses.length - berubah,
       total: houses.length,
     };
   });
 
-  const klasterDistribution = ["K1", "K2", "K3"].map(
-    (k) => ({
-      label: `${k} — ${
-        k === "K1"
-          ? "Tidak/Sedikit Berubah"
-          : k === "K2"
-            ? "Perubahan Sedang"
-            : "Perubahan Signifikan"
-      }`,
-      jumlah: lagaligoData.filter(
-        (h) => h.klaster === k,
-      ).length,
-    }),
-  );
+  const klasterDistribution = [
+    "K1",
+    "K2",
+    "K3",
+  ].map((k) => ({
+    label: `${k} — ${
+      k === "K1"
+        ? "Tidak/Sedikit Berubah"
+        : k === "K2"
+          ? "Perubahan Sedang"
+          : "Perubahan Signifikan"
+    }`,
+    jumlah: dangerakkoData.filter(
+      (h) => h.klaster === k,
+    ).length,
+  }));
 
   return {
     jenisPerubahan,
@@ -208,7 +252,7 @@ export function getHousingChartData() {
 }
 
 export function listChangedHouses(): House[] {
-  return lagaligoData.filter(
+  return dangerakkoData.filter(
     (h) => h.statusPerubahan === "berubah",
   );
 }
@@ -248,18 +292,24 @@ export function getHousingInsight(
   const jenisCounts: Record<string, number> = {};
 
   for (const key of JENIS_PERUBAHAN_KEYS) {
-    jenisCounts[key as string] = filtered.filter(
-      (h) => h[key] === true,
-    ).length;
+    jenisCounts[key as string] =
+      filtered.filter(
+        (h) => h[key] === true,
+      ).length;
   }
 
   const dominanEntry = Object.entries(
     jenisCounts,
-  ).sort(([, a], [, b]) => b - a)[0];
+  ).sort(
+    ([, a], [, b]) => b - a,
+  )[0];
 
   const dominanLabel =
-    dominanEntry && dominanEntry[1] > 0
-      ? JENIS_PERUBAHAN_LABELS[dominanEntry[0]]
+    dominanEntry &&
+    dominanEntry[1] > 0
+      ? JENIS_PERUBAHAN_LABELS[
+          dominanEntry[0]
+        ]
       : null;
 
   const konteks = filters.rt
@@ -268,7 +318,7 @@ export function getHousingInsight(
       ? `Di ${filters.rw}`
       : filters.klaster
         ? `Pada klaster ${filters.klaster}`
-        : "Di seluruh Kelurahan Lagaligo";
+        : "Di seluruh Kelurahan Dangerakko";
 
   const ringkasan = filters.jenisPerubahan
     ? `${konteks}, terdapat ${filtered.filter(
@@ -319,7 +369,10 @@ export function getHousingInsight(
     (h) => h.klaster === "K3",
   ).length;
 
-  if (k3Count > 0 && !filters.klaster) {
+  if (
+    k3Count > 0 &&
+    !filters.klaster
+  ) {
     poin.push(
       `${k3Count} rumah termasuk klaster K3 (perubahan signifikan ≥3 jenis) — memerlukan perhatian khusus dalam perencanaan tata ruang.`,
     );
@@ -328,23 +381,28 @@ export function getHousingInsight(
   if (
     filters.rt &&
     total > 0 &&
-    lagaligoData.length !== total
+    dangerakkoData.length !== total
   ) {
-    const avgBerubah = Math.round(
-      (lagaligoData.filter(
-        (h) => h.statusPerubahan === "berubah",
-      ).length /
-        lagaligoData.length) *
-        100,
-    );
+    const avgBerubah =
+      Math.round(
+        (dangerakkoData.filter(
+          (h) =>
+            h.statusPerubahan ===
+            "berubah",
+        ).length /
+          dangerakkoData.length) *
+          100,
+      );
 
     if (
       Math.abs(
-        persenBerubah - avgBerubah,
+        persenBerubah -
+          avgBerubah,
       ) >= 10
     ) {
       const lebih =
-        persenBerubah > avgBerubah
+        persenBerubah >
+        avgBerubah
           ? "di atas"
           : "di bawah";
 
@@ -363,20 +421,20 @@ export function getHousingInsight(
 export function getHousingMetadata() {
   return {
     namaDataset:
-      "Pendataan Lengkap Perumahan Kelurahan Lagaligo",
+      "Pendataan Lengkap Perumahan Kelurahan Dangerakko",
 
     periodeData: "2024",
 
     sumberData:
-      "Pemerintah Kelurahan Lagaligo, Kecamatan Wara Timur, Kota Palopo",
+      "Data Survei Kelurahan Dangerakko, Kota Palopo",
 
     unitObservasi:
       "Bangunan/Rumah Tangga",
 
     cakupanWilayah:
-      "Kelurahan Lagaligo, Kecamatan Wara Timur, Kota Palopo, Sulawesi Selatan",
+      "Kelurahan Dangerakko, Kota Palopo, Sulawesi Selatan",
 
     jumlahObservasi:
-      lagaligoData.length,
+      dangerakkoData.length,
   };
 }

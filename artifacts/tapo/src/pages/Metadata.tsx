@@ -54,7 +54,7 @@ type HousingMetadata = {
 const metadata: HousingMetadata = {
   namaDataset: "Pendataan Lengkap Perumahan Kelurahan Boting",
 
-  periodeData: "2024",
+  periodeData: "2026",
 
   sumberData:
     "Pemerintah Kelurahan Boting, Kecamatan Wara Selatan, Kota Palopo",

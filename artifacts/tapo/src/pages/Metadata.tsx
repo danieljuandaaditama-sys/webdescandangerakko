@@ -62,7 +62,7 @@ const metadata: HousingMetadata = {
   unitObservasi: "Bangunan/Rumah Tangga",
 
   cakupanWilayah:
-    "Kelurahan Boting, Kecamatan Wara Timur, Kota Palopo, Sulawesi Selatan",
+    "Kelurahan Boting, Kecamatan Wara Timur, Kota Palopo, Sulawesi timur",
 
   jumlahObservasi: 573,
 

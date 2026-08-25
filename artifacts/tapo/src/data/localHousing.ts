@@ -1,4 +1,4 @@
-import { botingData, type House } from "./boting-data";
+import { lagaligoData, type House } from "./lagaligo-data";
 
 export const JENIS_PERUBAHAN_LABELS: Record<string, string> = {
   perubahanPagar: "Perubahan Pagar",
@@ -26,66 +26,103 @@ export type HouseFilters = {
 };
 
 export function listHouses(filters: HouseFilters = {}): House[] {
-  return botingData.filter((h) => {
-    if (filters.statusPerubahan && h.statusPerubahan !== filters.statusPerubahan) return false;
+  return lagaligoData.filter((h) => {
+    if (
+      filters.statusPerubahan &&
+      h.statusPerubahan !== filters.statusPerubahan
+    )
+      return false;
 
     if (filters.jenisPerubahan) {
       const key = filters.jenisPerubahan as keyof House;
       if (!h[key]) return false;
     }
 
-    if (filters.kondisiBangunan && h.kondisiBangunan !== filters.kondisiBangunan) return false;
+    if (
+      filters.kondisiBangunan &&
+      h.kondisiBangunan !== filters.kondisiBangunan
+    )
+      return false;
+
     if (filters.rt && h.rt !== filters.rt) return false;
     if (filters.rw && h.rw !== filters.rw) return false;
     if (filters.klaster && h.klaster !== filters.klaster) return false;
-    if (filters.jeniLantai && h.jeniLantai !== filters.jeniLantai) return false;
-    if (filters.jenisDinding && h.jenisDinding !== filters.jenisDinding) return false;
+    if (filters.jeniLantai && h.jeniLantai !== filters.jeniLantai)
+      return false;
+    if (filters.jenisDinding && h.jenisDinding !== filters.jenisDinding)
+      return false;
 
     return true;
   });
 }
 
 export function getHousingSummary() {
-  const total = botingData.length;
-  const berubah = botingData.filter((h) => h.statusPerubahan === "berubah").length;
+  const total = lagaligoData.length;
+
+  const berubah = lagaligoData.filter(
+    (h) => h.statusPerubahan === "berubah",
+  ).length;
 
   const byJenisPerubahan = JENIS_PERUBAHAN_KEYS
     .map((key) => ({
       label: JENIS_PERUBAHAN_LABELS[key as string],
-      jumlah: botingData.filter((h) => h[key] === true).length,
+      jumlah: lagaligoData.filter((h) => h[key] === true).length,
     }))
     .filter((item) => item.jumlah > 0)
     .sort((a, b) => b.jumlah - a.jumlah);
 
-  const byKondisi = ["Baik", "Rusak Ringan", "Rusak Berat"].map((label) => ({
-    label,
-    jumlah: botingData.filter((h) => h.kondisiBangunan === label).length,
-  }));
+  const byKondisi = ["Baik", "Rusak Ringan", "Rusak Berat"].map(
+    (label) => ({
+      label,
+      jumlah: lagaligoData.filter(
+        (h) => h.kondisiBangunan === label,
+      ).length,
+    }),
+  );
 
-  const rtSet = [...new Set(botingData.map((h) => h.rt))].sort();
+  const rtSet = [...new Set(lagaligoData.map((h) => h.rt))].sort();
+
   const byRt = rtSet.map((rt) => ({
     label: rt,
-    jumlah: botingData.filter((h) => h.rt === rt).length,
+    jumlah: lagaligoData.filter((h) => h.rt === rt).length,
   }));
 
   const byKlaster = ["K1", "K2", "K3"].map((label) => ({
     label,
-    jumlah: botingData.filter((h) => h.klaster === label).length,
+    jumlah: lagaligoData.filter((h) => h.klaster === label).length,
   }));
 
-  const lantaiSet = [...new Set(botingData.map((h) => h.jeniLantai).filter(Boolean))] as string[];
+  const lantaiSet = [
+    ...new Set(
+      lagaligoData
+        .map((h) => h.jeniLantai)
+        .filter(Boolean),
+    ),
+  ] as string[];
+
   const byJenisLantai = lantaiSet
     .map((label) => ({
       label,
-      jumlah: botingData.filter((h) => h.jeniLantai === label).length,
+      jumlah: lagaligoData.filter(
+        (h) => h.jeniLantai === label,
+      ).length,
     }))
     .sort((a, b) => b.jumlah - a.jumlah);
 
-  const dindingSet = [...new Set(botingData.map((h) => h.jenisDinding).filter(Boolean))] as string[];
+  const dindingSet = [
+    ...new Set(
+      lagaligoData
+        .map((h) => h.jenisDinding)
+        .filter(Boolean),
+    ),
+  ] as string[];
+
   const byJenisDinding = dindingSet
     .map((label) => ({
       label,
-      jumlah: botingData.filter((h) => h.jenisDinding === label).length,
+      jumlah: lagaligoData.filter(
+        (h) => h.jenisDinding === label,
+      ).length,
     }))
     .sort((a, b) => b.jumlah - a.jumlah);
 
@@ -93,7 +130,10 @@ export function getHousingSummary() {
     totalRumah: total,
     rumahBerubah: berubah,
     rumahTidakBerubah: total - berubah,
-    persenPerubahan: total > 0 ? Math.round((berubah / total) * 100) : 0,
+    persenPerubahan:
+      total > 0
+        ? Math.round((berubah / total) * 100)
+        : 0,
     byJenisPerubahan,
     byKondisi,
     byRt,
@@ -107,20 +147,34 @@ export function getHousingChartData() {
   const jenisPerubahan = JENIS_PERUBAHAN_KEYS
     .map((key) => ({
       label: JENIS_PERUBAHAN_LABELS[key as string],
-      jumlah: botingData.filter((h) => h[key] === true).length,
+      jumlah: lagaligoData.filter((h) => h[key] === true).length,
     }))
     .filter((item) => item.jumlah > 0)
     .sort((a, b) => b.jumlah - a.jumlah);
 
-  const kondisiBangunan = ["Baik", "Rusak Ringan", "Rusak Berat"].map((label) => ({
+  const kondisiBangunan = [
+    "Baik",
+    "Rusak Ringan",
+    "Rusak Berat",
+  ].map((label) => ({
     label,
-    jumlah: botingData.filter((h) => h.kondisiBangunan === label).length,
+    jumlah: lagaligoData.filter(
+      (h) => h.kondisiBangunan === label,
+    ).length,
   }));
 
-  const rtSet = [...new Set(botingData.map((h) => h.rt))].sort();
+  const rtSet = [
+    ...new Set(lagaligoData.map((h) => h.rt)),
+  ].sort();
+
   const statusPerRt = rtSet.map((rt) => {
-    const houses = botingData.filter((h) => h.rt === rt);
-    const berubah = houses.filter((h) => h.statusPerubahan === "berubah").length;
+    const houses = lagaligoData.filter(
+      (h) => h.rt === rt,
+    );
+
+    const berubah = houses.filter(
+      (h) => h.statusPerubahan === "berubah",
+    ).length;
 
     return {
       rt,
@@ -130,16 +184,20 @@ export function getHousingChartData() {
     };
   });
 
-  const klasterDistribution = ["K1", "K2", "K3"].map((k) => ({
-    label: `${k} — ${
-      k === "K1"
-        ? "Tidak/Sedikit Berubah"
-        : k === "K2"
-          ? "Perubahan Sedang"
-          : "Perubahan Signifikan"
-    }`,
-    jumlah: botingData.filter((h) => h.klaster === k).length,
-  }));
+  const klasterDistribution = ["K1", "K2", "K3"].map(
+    (k) => ({
+      label: `${k} — ${
+        k === "K1"
+          ? "Tidak/Sedikit Berubah"
+          : k === "K2"
+            ? "Perubahan Sedang"
+            : "Perubahan Signifikan"
+      }`,
+      jumlah: lagaligoData.filter(
+        (h) => h.klaster === k,
+      ).length,
+    }),
+  );
 
   return {
     jenisPerubahan,
@@ -150,31 +208,55 @@ export function getHousingChartData() {
 }
 
 export function listChangedHouses(): House[] {
-  return botingData.filter((h) => h.statusPerubahan === "berubah");
+  return lagaligoData.filter(
+    (h) => h.statusPerubahan === "berubah",
+  );
 }
 
-export function getHousingInsight(filters: HouseFilters = {}) {
+export function getHousingInsight(
+  filters: HouseFilters = {},
+) {
   const filtered = listHouses(filters);
   const total = filtered.length;
 
   if (total === 0) {
     return {
-      ringkasan: "Tidak ada data yang sesuai dengan filter yang dipilih.",
-      poin: ["Coba ubah atau hapus filter untuk melihat data."],
+      ringkasan:
+        "Tidak ada data yang sesuai dengan filter yang dipilih.",
+      poin: [
+        "Coba ubah atau hapus filter untuk melihat data.",
+      ],
     };
   }
 
-  const berubah = filtered.filter((h) => h.statusPerubahan === "berubah").length;
-  const persenBerubah = Math.round((berubah / total) * 100);
-  const rusak = filtered.filter((h) => h.kondisiBangunan !== "Baik").length;
-  const rusakBerat = filtered.filter((h) => h.kondisiBangunan === "Rusak Berat").length;
+  const berubah = filtered.filter(
+    (h) => h.statusPerubahan === "berubah",
+  ).length;
+
+  const persenBerubah = Math.round(
+    (berubah / total) * 100,
+  );
+
+  const rusak = filtered.filter(
+    (h) => h.kondisiBangunan !== "Baik",
+  ).length;
+
+  const rusakBerat = filtered.filter(
+    (h) => h.kondisiBangunan === "Rusak Berat",
+  ).length;
 
   const jenisCounts: Record<string, number> = {};
+
   for (const key of JENIS_PERUBAHAN_KEYS) {
-    jenisCounts[key as string] = filtered.filter((h) => h[key] === true).length;
+    jenisCounts[key as string] = filtered.filter(
+      (h) => h[key] === true,
+    ).length;
   }
 
-  const dominanEntry = Object.entries(jenisCounts).sort(([, a], [, b]) => b - a)[0];
+  const dominanEntry = Object.entries(
+    jenisCounts,
+  ).sort(([, a], [, b]) => b - a)[0];
+
   const dominanLabel =
     dominanEntry && dominanEntry[1] > 0
       ? JENIS_PERUBAHAN_LABELS[dominanEntry[0]]
@@ -186,13 +268,18 @@ export function getHousingInsight(filters: HouseFilters = {}) {
       ? `Di ${filters.rw}`
       : filters.klaster
         ? `Pada klaster ${filters.klaster}`
-        : "Di seluruh Kelurahan Boting";
+        : "Di seluruh Kelurahan Lagaligo";
 
   const ringkasan = filters.jenisPerubahan
     ? `${konteks}, terdapat ${filtered.filter(
-        (h) => h[filters.jenisPerubahan as keyof House],
+        (h) =>
+          h[
+            filters.jenisPerubahan as keyof House
+          ],
       ).length} rumah dengan ${
-        JENIS_PERUBAHAN_LABELS[filters.jenisPerubahan] ?? filters.jenisPerubahan
+        JENIS_PERUBAHAN_LABELS[
+          filters.jenisPerubahan
+        ] ?? filters.jenisPerubahan
       } dari total ${total} rumah terdata.`
     : `${konteks}, terdapat ${total} rumah terdata. Sebanyak ${berubah} rumah (${persenBerubah}%) mengalami perubahan.`;
 
@@ -228,38 +315,68 @@ export function getHousingInsight(filters: HouseFilters = {}) {
     );
   }
 
-  const k3Count = filtered.filter((h) => h.klaster === "K3").length;
+  const k3Count = filtered.filter(
+    (h) => h.klaster === "K3",
+  ).length;
+
   if (k3Count > 0 && !filters.klaster) {
     poin.push(
       `${k3Count} rumah termasuk klaster K3 (perubahan signifikan ≥3 jenis) — memerlukan perhatian khusus dalam perencanaan tata ruang.`,
     );
   }
 
-  if (filters.rt && total > 0 && botingData.length !== total) {
+  if (
+    filters.rt &&
+    total > 0 &&
+    lagaligoData.length !== total
+  ) {
     const avgBerubah = Math.round(
-      (botingData.filter((h) => h.statusPerubahan === "berubah").length /
-        botingData.length) *
+      (lagaligoData.filter(
+        (h) => h.statusPerubahan === "berubah",
+      ).length /
+        lagaligoData.length) *
         100,
     );
 
-    if (Math.abs(persenBerubah - avgBerubah) >= 10) {
-      const lebih = persenBerubah > avgBerubah ? "di atas" : "di bawah";
+    if (
+      Math.abs(
+        persenBerubah - avgBerubah,
+      ) >= 10
+    ) {
+      const lebih =
+        persenBerubah > avgBerubah
+          ? "di atas"
+          : "di bawah";
+
       poin.push(
         `${filters.rt} memiliki tingkat perubahan (${persenBerubah}%) ${lebih} rata-rata kelurahan (${avgBerubah}%).`,
       );
     }
   }
 
-  return { ringkasan, poin };
+  return {
+    ringkasan,
+    poin,
+  };
 }
 
 export function getHousingMetadata() {
   return {
-    namaDataset: "Pendataan Lengkap Perumahan Kelurahan Boting",
+    namaDataset:
+      "Pendataan Lengkap Perumahan Kelurahan Lagaligo",
+
     periodeData: "2024",
-    sumberData: "Pemerintah Kelurahan Boting, Kecamatan Wara Selatan, Kota Palopo",
-    unitObservasi: "Bangunan/Rumah Tangga",
-    cakupanWilayah: "Kelurahan Boting, Kecamatan Wara Selatan, Kota Palopo, Sulawesi Selatan",
-    jumlahObservasi: botingData.length,
+
+    sumberData:
+      "Pemerintah Kelurahan Lagaligo, Kecamatan Wara Timur, Kota Palopo",
+
+    unitObservasi:
+      "Bangunan/Rumah Tangga",
+
+    cakupanWilayah:
+      "Kelurahan Lagaligo, Kecamatan Wara Timur, Kota Palopo, Sulawesi Selatan",
+
+    jumlahObservasi:
+      lagaligoData.length,
   };
 }

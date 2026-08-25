@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { botingData } from "@/data/boting-data";
+import { lagaligoData } from "@/data/lagaligo-data";
 import { Database, Search, Download, ChevronLeft, ChevronRight, ChevronsUpDown, ChevronUp, ChevronDown } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -28,7 +28,7 @@ export default function DataPerumahan() {
 
   // Data is fixed and bundled locally; no API request is needed.
   const houses = useMemo(() => {
-    return botingData.filter((h) => {
+    return lagaligoData.filter((h) => {
       if (filterStatus !== "all" && h.statusPerubahan !== filterStatus) return false;
       if (filterKondisi !== "all" && h.kondisiBangunan !== filterKondisi) return false;
       if (filterRT !== "all" && h.rt !== filterRT) return false;
@@ -106,7 +106,7 @@ export default function DataPerumahan() {
           <Database className="w-8 h-8 text-primary" /> Data Perumahan
         </h1>
         <p className="text-muted-foreground text-sm font-medium uppercase tracking-widest">
-          Kelurahan Boting · Database Master
+          Kelurahan lagaligo · Database Master
         </p>
       </div>
 

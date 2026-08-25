@@ -1,5 +1,9 @@
 import { useState, useMemo } from "react";
-import { dangerakkoData, type House } from "@/data/dangerakko-data";
+import {
+  dangerakkoData,
+  type House,
+} from "@/data/dangerakko-data";
+
 import {
   Database,
   Search,
@@ -14,7 +18,9 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
+
 import { Input } from "@/components/ui/input";
+
 import {
   Select,
   SelectContent,
@@ -22,7 +28,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
 import { Button } from "@/components/ui/button";
+
 import {
   Table,
   TableBody,
@@ -31,6 +39,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -71,10 +80,11 @@ export default function DataPerumahan() {
     useState<SortOrder>("asc");
 
   // =========================================================
-  // DATA LAGALIGO
+  // DATA DANGERAKKO
   // =========================================================
   const houses = useMemo(() => {
-    return dangerakkoData.filter((h) => {
+    return dangerakkoData.filter((h: House) => {
+      // FILTER STATUS
       if (
         filterStatus !== "all" &&
         h.statusPerubahan !== filterStatus
@@ -82,6 +92,7 @@ export default function DataPerumahan() {
         return false;
       }
 
+      // FILTER KONDISI
       if (
         filterKondisi !== "all" &&
         h.kondisiBangunan !== filterKondisi
@@ -89,6 +100,7 @@ export default function DataPerumahan() {
         return false;
       }
 
+      // FILTER RT
       if (
         filterRT !== "all" &&
         h.rt !== filterRT
@@ -96,6 +108,7 @@ export default function DataPerumahan() {
         return false;
       }
 
+      // FILTER JENIS PERUBAHAN
       if (filterJenis !== "all") {
         const jenisField =
           filterJenis as keyof typeof h;
@@ -253,6 +266,7 @@ export default function DataPerumahan() {
   return (
     <div className="container mx-auto px-4 py-8 space-y-6 animate-in fade-in duration-500">
 
+      {/* HEADER */}
       <div className="flex flex-col gap-1">
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
           <Database className="w-8 h-8 text-primary" />
@@ -260,7 +274,7 @@ export default function DataPerumahan() {
         </h1>
 
         <p className="text-muted-foreground text-sm font-medium uppercase tracking-widest">
-          Kelurahan Lagaligo · Database Master
+          Kelurahan Dangerakko · Database Master
         </p>
       </div>
 
@@ -583,9 +597,7 @@ export default function DataPerumahan() {
                 <TableHead
                   className="w-20 text-center cursor-pointer hover:bg-muted"
                   onClick={() =>
-                    toggleSort(
-                      "klaster",
-                    )
+                    toggleSort("klaster")
                   }
                 >
                   <div className="flex items-center justify-center">
@@ -609,9 +621,7 @@ export default function DataPerumahan() {
                       {Array(14)
                         .fill(0)
                         .map((_, j) => (
-                          <TableCell
-                            key={j}
-                          >
+                          <TableCell key={j}>
                             <Skeleton className="h-5 w-full" />
                           </TableCell>
                         ))}
@@ -696,11 +706,11 @@ export default function DataPerumahan() {
                       </TableCell>
 
                       <TableCell className="text-xs">
-                        {h.jeniLantai ||
+                        {h.jenisLantai ||
                           "—"}{" "}
                         (
                         {h.jumlahLantai ||
-                          "—"}
+                          "—"}{" "}
                         Lt)
                       </TableCell>
 
@@ -715,7 +725,8 @@ export default function DataPerumahan() {
                       </TableCell>
 
                       <TableCell className="text-xs">
-                        {h.pagar || "—"}
+                        {h.pagar ||
+                          "—"}
                       </TableCell>
 
                       <TableCell className="text-xs font-medium">
@@ -793,6 +804,7 @@ export default function DataPerumahan() {
             <span className="text-foreground">
               {processedData.length}
             </span>{" "}
+
             rumah
 
           </div>
@@ -839,11 +851,9 @@ export default function DataPerumahan() {
                   )
                 }
                 disabled={
-                  page ===
-                    totalPages ||
+                  page === totalPages ||
                   isLoading ||
-                  processedData.length ===
-                    0
+                  processedData.length === 0
                 }
               >
                 <ChevronRight className="w-4 h-4" />

@@ -39,7 +39,9 @@ export function Shell({ children }: ShellProps) {
               <Map className="w-5 h-5" />
             </div>
             <div className="flex flex-col">
-              <span className="font-bold text-lg leading-tight tracking-tight">TAPO</span>
+             <span className="font-bold text-lg leading-tight tracking-tight">
+  WebDescan
+</span>
               <span className="text-xs text-muted-foreground leading-none font-medium">
                 Kelurahan Dangerakko
               </span>
